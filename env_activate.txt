@@ -1,0 +1,1 @@
+PS C:\Users\ellor\Documents\Glenn> & c:/Users/ellor/Documents/Glenn/crm/env/Scripts/Activate.ps1
