@@ -1,0 +1,56 @@
+{% extends 'orgs/main.html' %}
+
+{% block content %}
+    <h1>Dashboard</h1>
+    
+    <div class="card card-body">
+        <table class="table table-sm">
+            <tr>
+                <th>Unit</th>
+                <th>Function</th>
+                <th>Asset</th>
+                <th>Component</th>
+            </tr>
+
+            {% for unit in units %}
+                <tr>
+                    <td>{{unit.name}}</td>
+                    <td>{{unit.function}}</td>
+                    <td>{{unit.asset}}</td>
+                    {% if unit.component != None %}
+                        <td><a href="/unit/{{unit.id}}">{{unit.component}}</a></td>
+                    {% else %}
+                        <td>None</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <br>
+    <div class="card card-body">
+        <table class="table table-sm">
+            <tr>
+                <th>ID</th>
+                <th>Severity</th>
+                <th>Entry Date</th>
+                <th>Unit</th>
+                <th>Asset</th>
+                <th>Component</th>
+                <th></th>
+            </tr>
+
+            {% for report in reports %}
+                <tr>
+                    <td>{{report.id}}</td>
+                    <td>{{report.condition.severityLevel}}</td>
+                    <td>{{report.condition.entry_date}}</td>
+                    <td>{{report.unit.name}}</td>
+                    <td>{{report.unit.asset}}</td>
+                    <td>{{report.unit.component}}</td>
+                    <td><a class="btn btn-outline-danger" href="#">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% endblock content %}
+

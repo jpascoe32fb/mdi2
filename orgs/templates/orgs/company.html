@@ -1,0 +1,129 @@
+{% extends 'orgs/main.html' %}
+
+{% block content %}
+<a href="/" class="btn btn-outline-secondary btn-sm">&laquo; Back</a>
+
+<br><br>
+<h2>{{unit_name}}</h2>
+<h3>Component List for {{ unit_name }}</h3>
+
+<div class="card card-body">
+    <table id="unitTable" class="table table-sm">
+        <thead>
+        <tr>
+            <th>Unit</th>
+            <th>Function</th>
+            <th>Asset</th>
+            <th>Component</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for unit in units %}
+            <tr>
+                <td>{{unit.name}}</td>
+                <td>{{unit.function}}</td>
+                <td>{{unit.asset}}</td>
+                {% if unit.component != None %}
+                    <td><a href="/unit/{{unit.id}}">{{unit.component}}</a></td>
+                {% else %}
+                    <td>None</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<br>
+
+<br>
+<h4>Open Reports </h4>
+
+<table id="entryTable" class="table table-sm">
+    <thead>
+        <tr>
+        <th>ID</th>
+        <th>Closed</th>
+        <th>Entry Date</th>
+        <th>Severity</th>
+        <th>Analyst</th>
+        <th>PDF</th>
+        <th>Details</th>
+        <th>Edit</th>
+        <th>Continue</th>
+        <th>Close</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for report in open_reports %}
+            <tr>
+            <td>{{report.unit.component}}</td>
+            {% if report.condition.closed %}
+                <td><input class="form-check-input" type="checkbox" checked disabled></td>
+            {% else %}
+                <td><input class="form-check-input" type="checkbox"  disabled></td>
+            {% endif %}     
+            <td>{{report.condition.entry_date}}</td>
+            <td>{{report.condition.severityLevel}}</td>
+            <td>{{report.condition.analyst}}</td>
+            <td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td>
+            <td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>
+            <td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td>
+            <td><a class="btn btn-secondary" href="#">Continue</a></td>
+            <td><a class="btn btn-danger btn-sm" href="#">Close</a></td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    $.fn.dataTable.ext.order['dom-checkbox'] = function(settings, col) {
+        return this.api().column(col, { order: 'index' }).nodes().map(function(td, i) {
+            return $('input', td).prop('checked') ? '1' : '0';
+        });
+    };
+
+    $('#entryTable').DataTable({
+        // Pagination
+        "pagingType": "full_numbers",
+        columnDefs: [
+            { orderable: false, targets: [4, 5, 6, 7] },
+            { type: 'dom-checkbox', targets: [1] } 
+        ],
+        stateSave: true,
+
+        // Search
+        searching: true,
+        searchDelay: 500,
+        search: {
+            regex: true,
+            smart: true
+        }
+    });
+
+    $('#unitTable').DataTable({
+        // Pagination
+        "pagingType": "full_numbers",
+        columnDefs: [
+            { orderable: false},
+        ],
+        stateSave: false,
+
+        // Search
+        searching: true,
+        searchDelay: 500,
+        search: {
+            regex: true,
+            smart: true
+        },
+
+        // Scrolling
+        scrollY: '300px',
+    });
+});
+</script>
+
+{% endblock content %}

@@ -1,0 +1,162 @@
+{% extends 'orgs/main.html' %}
+
+{% block content %}
+<!--a href="/" class="btn btn-outline-secondary btn-sm">&laquo; Back</a-->
+<button type="button" id="back" class="btn btn-outline-secondary btn-sm">&laquo; Back</button>
+
+<script>
+    var backButton = $('#back');
+    backButton.on('click', function() {
+        history.back();
+        history.go(-1);
+      });
+</script>
+<br><br>
+{% if unit.name %}
+    <h5>{{unit.name}} / {{unit.function}} / {{unit.asset}} / {{unit.component}}</h5>
+    <div class="card card-body">
+        <table class="table table-sm">
+            <tr>
+                <th>Unit</th>
+                <th>Function</th>
+                <th>Asset</th>
+                <th>Component</th>
+            </tr>
+            <tr>
+                <td>{{unit.name}}</td>
+                <td>{{unit.function}}</td>
+                <td>{{unit.asset}}</td>
+                <td>{{unit.component}}</td>
+            </tr>
+        </table>
+    </div>
+
+    <h1>Condition Assessment Entries</h1>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <canvas id="myChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <br>
+    <div id="faultTableContainer"></div> 
+
+    <a type="button" class="btn btn-primary" href="{% url 'create_entry' unit.id %}">Create Entry</a>
+    <!--button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-issue-modal" -->
+        <!--Create Entry-->
+    <!--/button-->
+
+    <a class="btn btn-outline-secondary" href="#" role="button" type="file">Import Entry</a>
+    <br>
+    {% if reports %}
+        <br>
+        
+            <table id="entryTable" class="table table-sm">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Closed</th>
+                  <th>Entry Date</th>
+                  <th>Severity</th>
+                  <th>Analyst</th>
+                  <th>PDF</th>
+                  <th>Details</th>
+                  <th>Edit</th>
+                  <th>Continue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for report in reports %}
+                    <tr>
+                      <td>{{unit.component}}</td>
+                      {% if report.condition.closed %}
+                        <td><input class="form-check-input" type="checkbox" checked disabled></td>
+                      {% else %}
+                        <td><input class="form-check-input" type="checkbox"  disabled></td>
+                      {% endif %}     
+                      <td>{{report.condition.entry_date}}</td>
+                      <td>{{report.condition.severityLevel}}</td>
+                      <td>{{report.condition.analyst}}</td>
+                      <td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td>
+                      <td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>
+                      <td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td>
+                      <td><a class="btn btn-secondary" href="#">Continue</a></td>
+                    </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+        
+          <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+          <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+          <script>
+            $(document).ready(function() {
+                $.fn.dataTable.ext.order['dom-checkbox'] = function(settings, col) {
+                    return this.api().column(col, { order: 'index' }).nodes().map(function(td, i) {
+                        return $('input', td).prop('checked') ? '1' : '0';
+                    });
+                };
+        
+                $('#entryTable').DataTable({
+                    // Pagination
+                    "pagingType": "full_numbers",
+                    columnDefs: [
+                        { orderable: false, targets: [4, 5, 6, 7] },
+                        { type: 'dom-checkbox', targets: [1] } // Assuming the checkboxes are in the 7th column
+                    ],
+                    stateSave: true,
+        
+                    // Search
+                    searching: true,
+                    searchDelay: 500,
+                    search: {
+                        regex: true,
+                        smart: true
+                    }
+                });
+            });
+        </script>
+        
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+          var severity_labels = {{ severity_labels|safe }};
+          var severity_data = {{ severity_data|safe }};
+          var backgroundColors = {
+            'LOW': 'cyan',
+            'MEDIUM': 'yellow',
+            'MED-HIGH': 'purple',
+            'HIGH': 'red',
+            'MISSED': 'grey',
+            'GOOD': 'green',
+          };
+          var backgroundColor = severity_labels.map(function(label){
+            return backgroundColors[label];
+          });
+          var ctx = document.getElementById('myChart').getContext('2d');
+          var myChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+              labels: severity_labels,
+              datasets: [{
+                label: '# of Reports',
+                data: severity_data,
+                backgroundColor: backgroundColor,
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              aspectRatio: 1.5
+            }
+          });
+        </script>
+{% endif %}
+
+{% else %}
+    <h1>Should return to home</h1>
+{% endif %}
+
+{% endblock content %}

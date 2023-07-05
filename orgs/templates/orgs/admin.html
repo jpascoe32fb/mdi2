@@ -1,0 +1,857 @@
+{% extends 'orgs/main.html' %}
+
+{% block content %}
+
+<h1>MDI Admin Page</h1>
+<br>
+
+<!--** COMPANIES **-->
+<h3>Company List - <button class="btn btn-primary" id="addCompany" data-toggle="modal" data-target="#addCompanyModal" type="button">Create New</button>
+</h3>
+<div class="card card-body">
+    <table id="companyTable" class="table table-sm">
+        <thead>
+        <tr>
+            <th>Company</th>
+            <th>Edit</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for company in companies %}
+            <tr>
+                <td>{{company.name}}</td>
+                <td><button type="button" class="btn btn-outline-warning" onclick="handle_edit_company({{company.id}})">Edit</button></td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="handle_delete_company({{company.id}})">Delete</button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!--Company Modals-->
+<form id="addCompanyForm">
+    {% csrf_token %}
+    <div class="modal fade" id="addCompanyModal" tabindex="-1" role="dialog" aria-labelledby="addCompanyModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCompanyModalLabel">Create New Company</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="companyInput">Company:</label>
+                        <input type="text" class="form-control" id="companyInput" placeholder="Enter company" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveNewCompanyBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!--** FAULT **-->
+<hr>
+<h4>Fault List -
+    <button class="btn btn-primary" id="addFault" data-toggle="modal" data-target="#addFaultModal" type="button">Create New</button>
+</h4>
+<div class="card card-body">
+    <table id="faultsTable" class="table table-sm">
+        <thead>
+        <tr>
+            <th># Used</th>
+            <th>id</th>
+            <th>Fault</th>
+            <th>FaultTable</th>
+            <th>Edit</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for fault in faults %}
+            <tr>
+                <td>0</td>
+                <td>{{fault.id}}</td>
+                <td>{{fault.fault}}</td>
+                <td>{{fault.fault_group}}</td>
+                <td><button type="button" class="btn btn-outline-warning" onclick="handle_edit_fault({{fault.id}})">Edit</button></td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="handle_delete_fault({{fault.id}})">Delete</Button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<br>
+<!-- Fault Modals -->
+<form id="addFaultForm">
+    {% csrf_token %}
+    <div class="modal fade" id="addFaultModal" tabindex="-1" role="dialog" aria-labelledby="addFaultModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addFaultModalLabel">Create New Fault</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="faultInput">Fault:</label>
+                        <input type="text" class="form-control" id="faultInput" placeholder="Enter fault" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="faultGroupInput">Fault Group:</label>
+                        <input type="text" class="form-control" id="faultGroupInput" placeholder="Enter fault group">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveNewFaultBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="editFaultForm">
+    {% csrf_token %}
+    <div class="modal fade" id="editFaultModal" tabindex="-1" role="dialog" aria-labelledby="editFaultModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editFaultModalLabel">Edit Current Fault</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="faultInput">Fault:</label>
+                        <input type="text" class="form-control" id="editFaultInput" placeholder="Enter fault" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="faultGroupInput">Fault Group:</label>
+                        <input type="text" class="form-control" id="editFaultGroupInput" placeholder="Enter fault group">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditFaultBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="deleteFaultForm">
+    {% csrf_token %}
+    <div class="modal fade" id="deleteFaultModal" tabindex="-1" role="dialog" aria-labelledby="deleteFaultModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteFaultModalLabel">Are you sure you want to delete this Fault?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveDeleteFaultBtn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!--** TECHNOLOGY **-->
+<hr>
+<h4>Technology List -
+    <button class="btn btn-primary" id="addTech" data-toggle="modal" data-target="#addTechModal" type="button">Create New</button>
+</h4>
+<div class="card card-body">
+    <table id="techTable" class="table table-sm">
+        <thead>
+        <tr>
+            <th>Technology</th>
+            <th>Edit</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for technology in technologies %}
+            <tr>
+                <td>{{technology}}</td>
+                <td><button type="button" class="btn btn-outline-warning" onclick="handle_edit_tech({{technology.id}})">Edit</button></td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="handle_delete_tech({{technology.id}})">Delete</button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<br>
+<!-- Tech Modals -->
+<form id="addTechForm">
+    {% csrf_token %}
+    <div class="modal fade" id="addTechModal" tabindex="-1" role="dialog" aria-labelledby="addTechModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTechModalLabel">Create New Technology</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="techInput">Technology:</label>
+                        <input type="text" class="form-control" id="techInput" placeholder="Enter technology" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveNewTechBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="editTechForm">
+    {% csrf_token %}
+    <div class="modal fade" id="editTechModal" tabindex="-1" role="dialog" aria-labelledby="editTechModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editTechModalLabel">Edit Current Technology</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editTechInput">Fault:</label>
+                        <input type="text" class="form-control" id="editTechInput" placeholder="Enter tech" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditTechBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="deleteTechForm">
+    {% csrf_token %}
+    <div class="modal fade" id="deleteTechModal" tabindex="-1" role="dialog" aria-labelledby="deleteTechModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteTechModalLabel">Are you sure you want to delete this Technology?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveDeleteTechBtn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!--** ANALYST **-->
+<hr>
+<h4>Analyst List -
+    <button class="btn btn-primary" id="addAnalyst" data-toggle="modal" data-target="#addAnalystModal" type="button">Create New</button>
+</h4>
+<div class="card card-body">
+    <table id="analystTable" class="table table-sm">
+        <thead>
+        <tr>
+            <th>Analyst</th>
+            <th>Edit</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for analyst in analysts %}
+            <tr>
+                <td>{{analyst.name}}</td>
+                <td><button type="button" class="btn btn-outline-warning" onclick="handle_edit_analyst({{analyst.id}})">Edit</button></td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="handle_delete_analyst({{analyst.id}})">Delete</button></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!--Analyst Modals-->
+<form id="addAnalystForm">
+    {% csrf_token %}
+    <div class="modal fade" id="addAnalystModal" tabindex="-1" role="dialog" aria-labelledby="addAnalystModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAnalystModalLabel">Create New Analyst</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="analystInput">Analyst:</label>
+                        <input type="text" class="form-control" id="analystInput" placeholder="Enter analyst" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveNewAnalystBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="editAnalystForm">
+    {% csrf_token %}
+    <div class="modal fade" id="editAnalystModal" tabindex="-1" role="dialog" aria-labelledby="editAnalystModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAnalystModalLabel">Edit Current Analyst</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editAnalystInput">Analyst:</label>
+                        <input type="text" class="form-control" id="editAnalystInput" placeholder="Enter analyst" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditAnalystBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<form id="deleteAnalystForm">
+    {% csrf_token %}
+    <div class="modal fade" id="deleteAnalystModal" tabindex="-1" role="dialog" aria-labelledby="deleteAnalystModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAnalystModalLabel">Are you sure you want to delete this Analyst?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveDeleteAnalystBtn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+    $(document).ready(function() {
+        $('#companyTable').DataTable({
+            // Pagination
+            "pagingType": "full_numbers",
+            columnDefs: [
+                { orderable: false, targets: [1,2] },
+            ],
+            stateSave: true,
+    
+            // Search
+            searching: true,
+            searchDelay: 500,
+            search: {
+                regex: true,
+                smart: true
+            }
+        });
+        $('#faultsTable').DataTable({
+            // Pagination
+            "pagingType": "full_numbers",
+            columnDefs: [
+                { orderable: false, targets: [4,5] },
+            ],
+            stateSave: true,
+    
+            // Search
+            searching: true,
+            searchDelay: 500,
+            search: {
+                regex: true,
+                smart: true
+            }
+        });
+
+        $('#techTable').DataTable({
+            // Pagination
+            "pagingType": "full_numbers",
+            columnDefs: [
+                { orderable: false, targets: [1,2] },
+            ],
+            stateSave: true,
+    
+            // Search
+            searching: true,
+            searchDelay: 500,
+            search: {
+                regex: true,
+                smart: true
+            }
+        });
+
+        $('#analystTable').DataTable({
+            // Pagination
+            "pagingType": "full_numbers",
+            columnDefs: [
+                { orderable: false, targets: [1,2] },
+            ],
+            stateSave: true,
+    
+            // Search
+            searching: true,
+            searchDelay: 500,
+            search: {
+                regex: true,
+                smart: true
+            }
+        });
+
+        document.getElementById('addFault').addEventListener('click', function() {
+            document.getElementById('faultInput').value = '';
+            document.getElementById('faultGroupInput').value = '';
+        });
+        document.getElementById('addTech').addEventListener('click', function() {
+            document.getElementById('techInput').value = '';
+        });
+        document.getElementById('addAnalyst').addEventListener('click', function() {
+            document.getElementById('analystInput').value = '';
+        });
+        document.getElementById('addCompany').addEventListener('click', function() {
+            document.getElementById('companyInput').value = '';
+        });
+
+        function create_company_submit(event) {
+            event.preventDefault();
+            var company = document.getElementById('companyInput').value;
+            formData = new FormData();
+            formData.append('company', company);
+            // Send the Ajax POST request with the FormData object
+            $.ajax({
+                url: 'create-company/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                    // Display success message or perform any other actions
+                    $('#addCompanyModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                    $('#addCompanyModal').modal('hide');
+                    alert("Error Creating New Company!");
+                    window.location.reload();
+                }
+            });
+        }
+        var addCompanyForm = document.getElementById("addCompanyForm");
+        addCompanyForm.addEventListener("submit", create_company_submit);
+
+        function create_fault_submit(event) {
+            event.preventDefault();
+            var fault = document.getElementById('faultInput').value;
+            var faultGroup = document.getElementById('faultGroupInput').value;
+            // Code for saving the new fault and fault group goes here
+            var formData = new FormData();
+            formData.append('fault', fault);
+            formData.append('fault_group', faultGroup);
+    
+            // Send the Ajax POST request with the FormData object
+            $.ajax({
+                url: 'create-fault/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                    // Display success message or perform any other actions
+                    $('#addFaultModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                    $('#addFaultModal').modal('hide');
+                    alert("Error Creating New Fault!");
+                    window.location.reload();
+                }
+            });
+    
+            // Close the modal after saving
+            $('#addFaultModal').modal('hide');
+        }
+        var addFaultForm = document.getElementById("addFaultForm");
+        addFaultForm.addEventListener("submit", create_fault_submit);     
+        
+        function create_tech_submit(event) {
+            event.preventDefault();
+            var tech = document.getElementById('techInput').value;
+            formData = new FormData();
+            formData.append('tech', tech);
+            // Send the Ajax POST request with the FormData object
+            $.ajax({
+                url: 'create-tech/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                    // Display success message or perform any other actions
+                    $('#addTechModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                    $('#addTechModal').modal('hide');
+                    alert("Error Creating New Technology!");
+                    window.location.reload();
+                }
+            });
+        }
+        var addTechForm = document.getElementById("addTechForm");
+        addTechForm.addEventListener("submit", create_tech_submit);
+
+        function create_analyst_submit(event) {
+            event.preventDefault();
+            var analyst = document.getElementById('analystInput').value;
+            formData = new FormData();
+            formData.append('analyst', analyst);
+            // Send the Ajax POST request with the FormData object
+            $.ajax({
+                url: 'create-analyst/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                    // Display success message or perform any other actions
+                    $('#addAnalystModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                    $('#addAnalystModal').modal('hide');
+                    alert("Error Creating New Analyst!");
+                    window.location.reload();
+                }
+            });
+        }
+        var addAnalystForm = document.getElementById("addAnalystForm");
+        addAnalystForm.addEventListener("submit", create_analyst_submit);
+    });
+
+    function handle_edit_fault(fault_id) {
+        $.ajax({
+            url: 'edit-fault/' + fault_id + '/',
+            type: 'GET',
+            data: {
+                   
+            },
+            dataType: 'json',
+            success: function(response) {
+              //console.log(response);
+              $('#editFaultInput').val(response.fault);
+              $('#editFaultGroupInput').val(response.fault_group);
+              $('#editFaultModal').modal('show');
+            },
+            error: function(response) {
+              alert("Error Trying to Modify Fault!");
+            }
+          });
+        function edit_fault_submit(event) {
+            event.preventDefault();
+            fault = $('#editFaultInput').val();
+            fault_group = $('#editFaultGroupInput').val();
+            formData = new FormData();
+            formData.append('fault', fault);
+            formData.append('fault_group', fault_group);
+            $.ajax({
+                url: 'edit-fault/' + fault_id + '/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#editFaultModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Modify Fault!");
+                  window.location.reload();
+                }
+              });
+        }
+        var editFaultForm = document.getElementById("editFaultForm");
+        editFaultForm.addEventListener("submit", edit_fault_submit);
+    }
+
+    function handle_delete_fault(fault_id) {
+        $('#deleteFaultModal').modal('show');
+        function delete_fault_submit(event) {
+            event.preventDefault();
+            $.ajax({
+                url: 'delete-fault/' + fault_id + '/',
+                type: 'POST',
+                data: "",
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#deleteFaultModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Delete Fault!");
+                  window.location.reload();
+                }
+            });
+        }
+        var deleteFaultForm = document.getElementById("deleteFaultForm");
+        deleteFaultForm.addEventListener("submit", delete_fault_submit);
+    }
+
+    function handle_edit_tech(tech_id) {
+        $.ajax({
+            url: 'edit-tech/' + tech_id + '/',
+            type: 'GET',
+            data: {
+                   
+            },
+            dataType: 'json',
+            success: function(response) {
+              //console.log(response);
+              $('#editTechInput').val(response.tech);
+              $('#editTechModal').modal('show');
+            },
+            error: function(response) {
+              alert("Error Trying to Modify Tech!");
+              $('#editTechInput').val('');
+            }
+          });
+        function edit_tech_submit(event) {
+            event.preventDefault();
+            tech = $('#editTechInput').val();
+            formData = new FormData();
+            formData.append('tech', tech);
+            $.ajax({
+                url: 'edit-tech/' + tech_id + '/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#editTechModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Modify Technology!");
+                  window.location.reload();
+                }
+              });
+        }
+        var editTechForm = document.getElementById("editTechForm");
+        editTechForm.addEventListener("submit", edit_tech_submit);
+    }
+
+    function handle_delete_tech(tech_id) {
+        $('#deleteTechModal').modal('show');
+        function delete_tech_submit(event) {
+            event.preventDefault();
+            $.ajax({
+                url: 'delete-tech/' + tech_id + '/',
+                type: 'POST',
+                data: "",
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#deleteTechModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Delete Technology!");
+                  window.location.reload();
+                }
+            });
+        }
+        var deleteTechForm = document.getElementById("deleteTechForm");
+        deleteTechForm.addEventListener("submit", delete_tech_submit);
+    }
+
+    function handle_edit_analyst(analyst_id) {
+        $.ajax({
+            url: 'edit-analyst/' + analyst_id + '/',
+            type: 'GET',
+            data: {
+                   
+            },
+            dataType: 'json',
+            success: function(response) {
+              //console.log(response);
+              $('#editAnalystInput').val(response.analyst);
+              $('#editAnalystModal').modal('show');
+            },
+            error: function(response) {
+              alert("Error Trying to Modify Analyst!");
+              $('#editAnalystInput').val('');
+            }
+          });
+        function edit_analyst_submit(event) {
+            event.preventDefault();
+            analyst = $('#editAnalystInput').val();
+            formData = new FormData();
+            formData.append('analyst', analyst);
+            $.ajax({
+                url: 'edit-analyst/' + analyst_id + '/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#editAnalystModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Modify Analyst!");
+                  window.location.reload();
+                }
+              });
+        }
+        var editAnalystForm = document.getElementById("editAnalystForm");
+        editAnalystForm.addEventListener("submit", edit_analyst_submit);
+    }
+
+    function handle_delete_analyst(analyst_id) {
+        $('#deleteAnalystModal').modal('show');
+        function delete_analyst_submit(event) {
+            event.preventDefault();
+            $.ajax({
+                url: 'delete-analyst/' + analyst_id + '/',
+                type: 'POST',
+                data: "",
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#deleteAnalystModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Delete Analyst!");
+                  window.location.reload();
+                }
+            });
+        }
+        var deleteAnalystForm = document.getElementById("deleteAnalystForm");
+        deleteAnalystForm.addEventListener("submit", delete_analyst_submit);
+    }
+</script>
+
+
+{% endblock content %}

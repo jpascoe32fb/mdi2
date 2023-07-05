@@ -1,0 +1,486 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+  <div class="modal fade" id="renameModal" tabindex="-1" role="dialog" aria-labelledby="renameModalLabel" aria-hidden="true" data-backdrop="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="renameModalLabel">Modify {{node.original.text}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form method="POST" id="renameForm">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="newNameInput">Set Name:</label>
+              <input type="text" class="form-control" id="newNameInput" required>
+            </div>
+            <div class="form-group">
+              <label for="newDescInput">Set Description:</label>
+              <textarea class="form-control" id="newDescInput"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
+  <div class="container-fluid">
+    <div class="row">
+      <div>
+        <div id="tree-container" class="card" style="width: 15rem;">
+          <div class="card-header bg-danger">
+            <h2 class="card-title">MDI</h2>
+          </div>
+          <div class="card-body">
+            <!-- Use Bootstrap icons for the tree nodes -->
+            <input type="text" id="tree-search-input" placeholder="Search..." />
+            <br>
+            <br>
+            <div id="jstree"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Store the expanded state of the tree nodes in sessionStorage
+// Store the expanded state of the tree nodes in sessionStorage
+function storeExpandedState() {
+  var tree = $('#jstree');
+  var state = tree.jstree('get_state', {
+    core: {
+      expanded: true
+    }
+  });
+  sessionStorage.setItem('treeState', JSON.stringify(state));
+}
+
+// Restore the expanded state of the tree nodes from sessionStorage
+function restoreExpandedState() {
+  var tree = $('#jstree');
+  var state = JSON.parse(sessionStorage.getItem('treeState'));
+  if (state) {
+    tree.jstree('set_state', state);
+  }
+}
+
+  //opened_node = []
+  $(document).ready(function() {
+    $.ajax({
+      type: 'GET',
+      url: '/unit_tree_data/',
+      dataType: 'json',
+      success: function(data) {
+        //jstree config
+        $('#jstree').jstree({
+          'plugins': ['contextmenu', 'wholerow', 'search', 'state', 'types', 'dnd'],//state
+          core: {
+            data: data,
+            check_callback: function (operation, node, node_parent, node_position, more) {
+              //console.log(more);
+              if (operation === 'move_node') {
+                //if(more.core) { //If dropped
+                  //console.log("Dropped");
+                //}
+                var nodeType = node.type;
+                var parentType = node_parent.type;
+                //console.log(node_parent);
+                if(node_parent.state.opened == false && node_parent.type != "Component") {
+                  $('#jstree').jstree('open_node', node_parent);
+                  //opened_node.push(node_parent);
+                }
+                /*var isOpenedNode = true;
+                //if (opened_node) and node_parent != opened_node and node_parent != opened_node.children
+                //close opened_node and clear opened_node array
+                
+                if(opened_node.length > 0) {
+                  console.log(opened_node);
+                  isOpenedNode = opened_node[0].id === node_parent.id || node_parent.children.includes(opened_node[0].id);
+                  console.log(isOpenedNode);
+                }
+                if(!isOpenedNode) {
+                  $('#jstree').jstree('close_node', opened_node[0]);
+                  opened_node = [];
+                }*/
+    
+                // Check if the move operation is allowed based on node types
+                if (nodeType === "Component" && parentType === "Asset") {
+                  return true;
+                } else if (nodeType === "Asset" && parentType === "Function") {
+                  return true; 
+                } else if (nodeType === "Function" && parentType === "Unit") {
+                  return true;
+                } else {
+                  return false;
+                }
+              }
+    
+              return true;
+            },
+            themes:{
+              icons: true,
+              types: {
+                Unit: {
+                  icon: '{% static "img/company_icon.png" %}'
+                },
+                Function: {
+                  icon: '{% static "img/function_icon.png" %}'
+                },
+                Asset: {
+                  icon: '{% static "img/asset_icon.png" %}'
+                },
+                Component: {
+                  icon: '{% static "img/component_icon.png" %}'
+                }
+              }
+            },
+            
+          },
+          search: {
+            case_sensitive: false,
+            show_only_matches: true
+          },
+          contextmenu: {
+            items: function(node) {
+              var items = {
+                "enter": {
+                  "label": "Query",
+                  "icon": 'bi bi-plus-square',
+                  "action": function() {
+                    enterNode(node);
+                  }
+                },
+                "rename": {
+                  "label": "Modify",
+                  "action": function() {
+                    renameNode(node);
+                  }
+                },
+                "create": {
+                  "label": "Create New",
+                  "icon": 'bi bi-plus-square',
+                  "submenu": {
+                    "here": {
+                      "label": "Sibling",
+                      "action": function() {
+                        createNodeHere(node);
+                      }
+                    },
+                    "child": {
+                      "label": "Child",
+                      "action": function() {
+                        createNodeChild(node);
+                      }
+                    },
+                  }
+                },
+                "delete": {
+                  "label": "Delete",
+                  "action": function() {
+                    deleteNode(node);
+                  }
+                }
+              };
+          
+              return items;
+            }
+          },
+          types: {
+            "Unit": {
+              "valid_children": ["Function"],
+              icon: '{% static "img/company_icon.png" %}'
+            },
+            "Function": {
+              "valid_children": ["Asset"],
+              icon: '{% static "img/factory.png" %}'
+            },
+            "Asset": {
+              "valid_children": ["Component"],
+              icon: '{% static "img/cog.png" %}'
+            },
+            "Component": {
+              "valid_children": [],
+              icon: '{% static "img/processor.png" %}'
+            }
+          },
+        });
+
+        // Handles the moving of a node through DND
+        $('#jstree').on('move_node.jstree', function(event, data) {
+          var parent = $('#jstree').jstree('get_node', data.parent);
+          //console.log(data);
+
+          // Send the Ajax POST request to update the node name
+          $.ajax({
+            url: '/move-node/',
+            type: 'POST',
+            data: {
+              'type': data.node.original.type,
+              'node_uid': data.node.original.uid,
+              'parent_uid': parent.original.uid,
+                 
+            },
+            dataType: 'json',
+            beforeSend: function(xhr, settings) {
+              // Retrieve the CSRF token from the cookie
+              var csrfToken = getCookie('csrftoken');
+              // Set the CSRF token in the request header
+              xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            },
+            success: function(response) {
+              // Handle the response from the server
+              $('#jstree').jstree('open_node', $('#jstree').jstree('get_node',data.old_parent));
+              
+              storeExpandedState();
+              window.location.reload();
+
+              
+            },
+            error: function(response) {
+              // Handle the error response
+              alert("Error Moving Node!");
+            }
+          });
+          $(document).ready(function() {
+            restoreExpandedState();
+          });
+        });
+
+       /* $('.tree-search-input').on('input', function() {
+          var searchString = $(this).val();
+          $('#tree-container').jstree("search", searchString);
+        });*/
+
+      },
+      error: function() {
+        alert('Error Loading Hierarchy Tree. Go Home to Refresh');
+        $('#tree-container').jstree("refresh");
+      }
+    });
+  });
+
+  function createNodeHere(node) {
+    var level = node.parents.length;
+    //console.log(node);
+
+    // Open the Bootstrap modal for naming
+    $('#renameModal').modal('show');
+  
+    // Handle form submission
+    $('#renameForm').on('submit', function(event) {
+      event.preventDefault();
+      var newName = $('#newNameInput').val();
+      var newDesc = $('#newDescInput').val();
+  
+      // Send the Ajax POST request to update the node name
+      $.ajax({
+        url: '/create-here/' + node.original.uid + '/',
+        type: 'POST',
+        data: {
+          'new_name': newName,
+          'new_desc': newDesc,
+          'level': level,     
+        },
+        dataType: 'json',
+        beforeSend: function(xhr, settings) {
+          // Retrieve the CSRF token from the cookie
+          var csrfToken = getCookie('csrftoken');
+          // Set the CSRF token in the request header
+          xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        },
+        success: function(response) {
+          // Handle the response from the server
+          // Close the Bootstrap modal
+          $('#renameModal').modal('hide');
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+          // Update the jstree node name
+          window.location.reload();
+          
+        },
+        error: function(response) {
+          // Handle the error response
+          // Show an error message or perform any other necessary actions
+          alert("Error Modifying Node!");
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+        }
+      });
+    }); 
+  }
+
+  function createNodeChild(node) {
+    var level = node.parents.length;
+    if(level > 3) {
+      alert("Can't create child at the end of the tree!");
+      return;
+    }
+    //console.log(node);
+
+    // Open the Bootstrap modal for naming
+    $('#renameModal').modal('show');
+  
+    // Handle form submission
+    $('#renameForm').on('submit', function(event) {
+      event.preventDefault();
+      var newName = $('#newNameInput').val();
+      var newDesc = $('#newDescInput').val();
+  
+      // Send the Ajax POST request to update the node name
+      $.ajax({
+        url: '/create-child/' + node.original.uid + '/',
+        type: 'POST',
+        data: {
+          'new_name': newName,
+          'new_desc': newDesc,
+          'level': level,     
+        },
+        dataType: 'json',
+        beforeSend: function(xhr, settings) {
+          // Retrieve the CSRF token from the cookie
+          var csrfToken = getCookie('csrftoken');
+          // Set the CSRF token in the request header
+          xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        },
+        success: function(response) {
+          // Handle the response from the server
+          // Close the Bootstrap modal
+          $('#renameModal').modal('hide');
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+          // Update the jstree node name
+          window.location.reload();
+          
+        },
+        error: function(response) {
+          // Handle the error response
+          // Show an error message or perform any other necessary actions
+          alert("Error Renaming Node!");
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+        }
+      });
+    });    
+  }
+
+  function enterNode(node) {
+    var level = node.parents.length;
+
+    if(level == 1) {//company
+      console.log(" 1");
+      window.location = '/company/' + node.original.faid + '/';
+      window.history.pushState("", "", "/company/" + node.original.faid + '/');
+    } else if (level == 2) {//function
+      console.log(" 2");
+      window.location = '/function/' + node.original.faid + '/';
+      window.history.pushState("", "", "/function/" + node.original.faid + '/');
+    } else if (level == 3) {//asset
+      console.log(" 3");
+      window.location = '/asset/' + node.original.faid + '/';
+      window.history.pushState("", "", "/asset/" + node.original.faid + '/');
+    } else {//component/unit
+      console.log(level);
+      //console.log(node.original);
+      window.location = '/unit/' + node.original.uid;
+      window.history.pushState("", "", "/unit/" + node.original.uid);
+    }
+  }
+
+  function renameNode(node) {
+    var level = node.parents.length;
+
+    $.ajax({
+      url: '/rename/' + node.original.faid + '/',
+      type: 'GET',
+      data: {
+        'level': level,     
+      },
+      dataType: 'json',
+      success: function(response) {
+        //console.log(response);
+        $('#newNameInput').val(response.name);
+        $('#newDescInput').val(response.description);
+      },
+      error: function(response) {
+        alert("Error Modifying Node!");
+        $('#newNameInput').val('');
+        $('#newDescInput').val('');
+      }
+    });
+  
+    // Open the Bootstrap modal for renaming
+    $('#renameModal').modal('show');
+  
+    // Handle form submission
+    $('#renameForm').on('submit', function(event) {
+      event.preventDefault();
+      var newName = $('#newNameInput').val();
+      var newDesc = $('#newDescInput').val();
+  
+      // Send the Ajax POST request to update the node name
+      $.ajax({
+        url: '/rename/' + node.original.faid + '/',
+        type: 'POST',
+        data: {
+          'new_name': newName,
+          'new_desc': newDesc,
+          'level': level,     
+        },
+        dataType: 'json',
+        beforeSend: function(xhr, settings) {
+          // Retrieve the CSRF token from the cookie
+          var csrfToken = getCookie('csrftoken');
+          // Set the CSRF token in the request header
+          xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        },
+        success: function(response) {
+          // Handle the response from the server
+          // Close the Bootstrap modal
+          $('#renameModal').modal('hide');
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+          // Update the jstree node name
+          window.location.reload();
+          
+        },
+        error: function(response) {
+          // Handle the error response
+          // Show an error message or perform any other necessary actions
+          alert("Error Modifying Node!");
+          $('#newNameInput').val('');
+          $('#newDescInput').val('');
+        }
+      });
+    });
+  }
+  
+  </script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.11/jstree.min.js"></script>
+  <!--link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css"/-->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</html>

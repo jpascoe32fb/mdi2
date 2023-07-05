@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>MDI</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+        <style>
+            /* custom styles */
+            .top-bar {
+              height: 0.75in;
+              background-color: #333;
+              display: flex;
+              justify-content: flex-start;
+              padding-left: 10px;
+              align-items: center;
+              color: #aaa;
+              font-size: 24px;
+            }
+            .second-bar {
+              height: 0.5in;
+              background-color: #ccc;
+            }
+            .section-header {
+              color: blue;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              padding: 5px;
+              text-align: left;
+              vertical-align: top;
+              border: 1px solid #ccc;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+          </style>
+    </head>
+    <body>
+        <div class="top-bar">Technology Condition Entry</div>
+        <div class="second-bar">{{report.unit.name.name}} / {{report.unit.function.name}} / {{report.unit.asset.name}} / {{report.unit.component.name}}
+            <div><a href="/">Log into Webservice</a></div>
+        </div>
+        
+        <div class="container mt-3">
+            <div class="section-header"><strong>Condition Entry Data</strong></div>
+            <div>Technology: {{report.condition.technology}}</div>
+            <div>Analyst: {{report.condition.analyst}}</div>
+            <div>Severity: {{report.condition.severity}}</div>
+            <div>Entry Date: {{report.condition.entry_date}}</div>
+            <div>Work Request: </div>
+            <div>Work Order: </div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Suspected Faults</strong></div>
+            <div class="card card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Fault</th>
+                        <th>Fault Group</th>
+                    </tr>
+                    <tr>
+                        <!--**Make fault a foreign key and loop this**-->
+                        <td>{{report.fault}}</td>
+                        <td>***Empty***</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Recommended Action</strong></div>
+            <!--**Make recommend a foreign key and loop this**-->
+            <div>{{report.recommendation}}</div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Comments</strong></div>
+            <!--**Make comments a foreign key and loop this**-->
+            <div>{{report.comment}}</div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Analyst Comments and Recommendations</strong></div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Lab Comments and Recommendations</strong></div>
+        </div>
+
+        <div class="container mt-3">
+            <div class="section-header"><strong>Linked Documents</strong></div>
+        </div>
+        
+    </body>
+</html>
