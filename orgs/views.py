@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, reverse
 from django.http import HttpResponse, JsonResponse
-from django.db.models import Count
+from django.db.models import Count, Max, Subquery, OuterRef
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
@@ -9,7 +9,11 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Table, TableStyle
 from reportlab.graphics.shapes import Rect
 from collections import Counter
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import pandas as pd
 from io import BytesIO
 import datetime
 import base64, re
@@ -34,59 +38,6 @@ def safe_get(model, **kwargs):
         return None
 
 def get_unit_tree_data(request):
-    units = Unit.objects.all()
-    unit_data = []
-    processed_names = set()
-    #processed_functions = set()
-    #processed_assets = set()
-    #processed_components = set()
-    #processed_plant_tags = set()
-
-    for unit in units:
-        if unit.name not in processed_names:
-            processed_names.add(unit.name)
-            name_units = Unit.objects.filter(name=unit.name)
-            function_data = []
-            processed_functions = set()
-            for name_unit in name_units:
-                if name_unit.function == None:
-                    continue
-                if name_unit.function not in processed_functions:
-                    processed_functions.add(name_unit.function)
-                    function_units = Unit.objects.filter(name=unit.name, function=name_unit.function)
-                    asset_data = []
-                    processed_assets = set()
-                    for function_unit in function_units:
-                        if function_unit.asset == None:
-                            continue
-                        if function_unit.asset not in processed_assets:
-                            processed_assets.add(function_unit.asset)
-                            asset_units = Unit.objects.filter(name=unit.name, function=name_unit.function, asset=function_unit.asset)
-                            component_data = []
-                            processed_components = set()
-                            for asset_unit in asset_units:
-                                if asset_unit.component == None:
-                                    continue
-                                if asset_unit.component not in processed_components:
-                                    processed_components.add(asset_unit.component)
-                                    component_units = Unit.objects.filter(name=unit.name, function=name_unit.function, asset=function_unit.asset, component=asset_unit.component)
-                                    plant_tag_data = []
-                                    processed_plant_tags = set()
-                                    for component_unit in component_units:
-                                        if component_unit == None:
-                                            continue
-                                        if component_unit.plant_tag not in processed_plant_tags:
-                                            processed_plant_tags.add(component_unit.plant_tag)
-                                            #plant_tag_data.append({'name': component_unit.plant_tag.name, 'text': component_unit.plant_tag.name})
-                                    component_data.append({'name': asset_unit.component.name, 'children': plant_tag_data, 'text': asset_unit.component.name, 'faid': asset_unit.component.id, 'uid': asset_unit.id, 'type': "Component"})
-                            asset_data.append({'name': function_unit.asset.name, 'children': component_data, 'text': function_unit.asset.name, 'faid': function_unit.asset.id, 'uid': function_unit.id, 'type': "Asset"})#may need to make function_unit.id
-                    function_data.append({'name': name_unit.function.name, 'children': asset_data, 'text': name_unit.function.name, 'faid': name_unit.function.id, 'uid': name_unit.id, 'type': "Function"})
-            unit_data.append({'name': unit.name.name, 'children': function_data, 'text': unit.name.name, 'faid': unit.name.id, 'uid': unit.id, 'type': "Unit"})    
-    #print(unit_data)
-    return JsonResponse(unit_data, safe=False)
-
-
-def get_unit_tree_data2(request):
     units = UnitName.objects.all()
     unit_data = []
     processed_names = set()
@@ -131,17 +82,12 @@ def get_unit_tree_data2(request):
                                         if component_unit.plant_tag not in processed_plant_tags:
                                             processed_plant_tags.add(component_unit.plant_tag)
                                             #plant_tag_data.append({'name': component_unit.plant_tag.name, 'text': component_unit.plant_tag.name})
-                                    component_data.append({'name': asset_unit.component.name, 'children': plant_tag_data, 'text': asset_unit.component.name, 'faid': asset_unit.component.id, 'uid': asset_unit.id})
-                                    #print(asset_unit.id)
-                            asset_data.append({'name': function_unit.asset.name, 'children': component_data, 'text': function_unit.asset.name, 'faid': function_unit.asset.id, 'uid': function_unit.id})#may need to make function_unit.id
-                    function_data.append({'name': name_unit.function.name, 'children': asset_data, 'text': name_unit.function.name, 'faid': name_unit.function.id, 'uid': name_unit.id})
-            print(unit.id)
-            unit_data.append({'name': unit.name, 'children': function_data, 'text': unit.name, 'faid': unit.id, 'uid': unit.id})
-
+                                    component_data.append({'name': asset_unit.component.name, 'children': plant_tag_data, 'text': asset_unit.component.name, 'faid': asset_unit.component.id, 'uid': asset_unit.id, 'type': "Component"})
+                            asset_data.append({'name': function_unit.asset.name, 'children': component_data, 'text': function_unit.asset.name, 'faid': function_unit.asset.id, 'uid': function_unit.id, 'type': "Asset"})#may need to make function_unit.id
+                    function_data.append({'name': name_unit.function.name, 'children': asset_data, 'text': name_unit.function.name, 'faid': name_unit.function.id, 'uid': name_unit.id, 'type': "Function"})
+            unit_data.append({'name': unit.name, 'children': function_data, 'text': unit.name, 'faid': unit.id, 'uid': unit.id, 'type': "Unit"})    
+    #print(unit_data)
     return JsonResponse(unit_data, safe=False)
-
-
-
 
 
 def home(request):
@@ -185,19 +131,63 @@ def generate_pdf(request, report_ids):
     #Page 2
     # Add general statistics to the next page
     p.showPage()
-    p.drawString(x=0, y=0, text="General Statistics")
-    sev_buffer = BytesIO()
+    p.setFont(psfontname='Helvetica', size=18)
+    p.drawString(x=225, y=750, text="Condition Entry Summary")
+
     severeties = [report.condition.severityLevel for report in reports]
     severity_counts = Counter(severeties)
-    # Create pie chart
-    sev_labels = severity_counts.keys()
-    sev_counts = severity_counts.values()
-    #plt.pie(sev_counts, labels=sev_labels, autopct='%1.1f%%', radius=0.8)
-    #plt.title('Condition Entry Summary')
-    #plt.savefig(sev_buffer, format='png')
-    #sev_buffer.seek(0)
-    #sev_pie = ImageReader(sev_buffer)
-    #p.drawImage(sev_pie, x=2, y=420, width=420, height=350)
+
+    # Create pandas DataFrame from the severity data
+    #sev_labels = severity_counts.keys()
+    #sev_counts = severity_counts.values()
+    df = pd.DataFrame.from_dict(severity_counts, orient='index', columns=['count'])
+    df.index.name = 'severity'
+    df.reset_index(inplace=True)
+
+    #Calculate the percentage for each severity
+    df['percentage'] = df['count'] / df['count'].sum() * 100
+    df['percentage'] = df['percentage'].round(2)
+    
+    #Create Pie chart
+    sev_color_codes = {
+        'HIGH': (1, 0, 0),
+        'LOW': (0, 1, 1),
+        'MEDIUM': (1, 1, 0),
+        'GOOD': (0, 1, 0),
+        'MISSED': (0.5, 0.5, 0.5),
+        'MED-HIGH': (1, 0, 1),
+    }
+    plt.figure(figsize=(6, 6))
+    sev_pie_colors = [sev_color_codes[severity] for severity in df['severity']]
+    plt.pie(df['count'], labels=df['severity'], colors=sev_pie_colors, autopct='%1.1f%%')
+    plt.title('Severity Distribution')
+
+    #Save the chart
+    sev_buffer = BytesIO()
+    plt.savefig(sev_buffer, format='png')
+    sev_buffer.seek(0)
+
+    #Draw the pie chart
+    sev_pie = ImageReader(sev_buffer)
+    p.drawImage(sev_pie, x=10, y=450, width=300, height=300)
+
+    #Draw the table
+    table_data = [['Severity', 'Count', 'Percent']] + df.values.tolist()
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('WIDTH', (2, 0), (2, -1), 80),
+    ]))
+    table.wrapOn(p, PAGE_WIDTH, PAGE_HEIGHT)
+    table.drawOn(p, x=320, y=650)
+
 
     #Page 3
     #Condition Entry Tables Summary
@@ -269,7 +259,7 @@ def generate_pdf(request, report_ids):
         p.drawString(x=50, y=735, text="Function:  " + report.unit.function.name)
         p.drawString(x=62, y=720, text="Asset:  " + report.unit.asset.name)
         p.drawString(x=45, y=705, text="Component:  " + report.unit.component.name)
-        p.drawString(x=50, y=690, text="Plant Tag:  None")
+        #p.drawString(x=50, y=690, text="Plant Tag:  None")
         #Fault Text
             #p.drawString(x=31, y=625, text=report.fault)
         text = " "#report.fault_group.all() + " :test test test test test test test test test test"
@@ -284,7 +274,7 @@ def generate_pdf(request, report_ids):
             t_string.textLine(line)
         p.drawText(t_string)
         #Comment Text
-        text = report.comment + " :test test test test test test test test test test test test test test test test test test test test test test test test test"
+        text = report.comment #+ " :test test test test test test test test test test test test test test test test test test test test test test test test test"
         if len(text) > 125:
             text = text[:120] + '\n' + text[120:]
             #if len(text) > 250: delete after 250 so it doesn't overrun the box
@@ -296,7 +286,7 @@ def generate_pdf(request, report_ids):
             t_string.textLine(line)
         p.drawText(t_string)
         #Recommend Text
-        text = report.recommendation + " :test test test test test test test test test test test test test test test test test test test test test test test test"
+        text = report.recommendation #+ " :test test test test test test test test test test test test test test test test test test test test test test test test"
         if len(text) > 125:
             text = text[:120] + '\n' + text[120:]
             #if len(text) > 250: delete after 250 so it doesn't overrun the box
@@ -315,22 +305,46 @@ def generate_pdf(request, report_ids):
 
 def detailed_condition(request, report_id):
     report = Report.objects.get(id=report_id)
+    fault_list = report.fault_group.all()
 
-    context = {'report': report}
+    context = {'report': report, 'fault_list': fault_list}
     return render(request, 'orgs/detailed_condition.html', context)
 
 def company_view(request, node_id):
     unit_name = UnitName.objects.get(id=node_id)
     units = Unit.objects.filter(name=unit_name)
-    open_reports = Report.objects.filter(unit__name=unit_name, condition__closed=False).order_by('-condition__entry_date')
-
-    context = {'unit_name':unit_name, 'units':units, 'open_reports': open_reports}
+    all_reports = Report.objects.filter(unit__name=unit_name)
+    open_reports = Report.objects.filter(unit__name=unit_name, condition__closed=False)#.order_by('-condition__entry_date')
+    
+    recent_reports = []
+    distinct_units = units.filter(component__isnull=False).distinct()
+    for unit in distinct_units:
+        temp_report = Report.objects.filter(unit=unit).order_by('-condition__entry_date').first()
+        if temp_report != None:
+            recent_reports.append(temp_report)
+    
+    context = {'unit_name':unit_name, 'units':units, 'open_reports': open_reports, 'all_reports':all_reports, 'recent_reports':recent_reports}
     return render(request, 'orgs/company.html', context)
 
 def function_view(request, node_id):
+    function = Function.objects.get(id=node_id)
+    units = Unit.objects.filter(function=function)
+    unit = units[0]
 
+    recent_reports = []
+    recent_reports_ids = ""
+    for unit in units:
+        #can make only closed by adding filter closed=True/False
+        recent_temp = Report.objects.filter(unit=unit).order_by('-condition__entry_date').first()
+        if recent_temp != None:
+            recent_reports.append(recent_temp)
+            #so that there isn't a blank space for generate_pdf's split on , to break
+            if recent_reports_ids != "":
+                recent_reports_ids += "," + "%d" % recent_temp.id
+            else:
+                recent_reports_ids += "%d" % recent_temp.id
 
-    context = {}
+    context = {'function': function, 'units':units, 'unit':unit, 'recent_reports_ids':recent_reports_ids}
     return render(request, 'orgs/function.html', context)
 
 def asset_view(request, asset_id):   
@@ -351,7 +365,7 @@ def asset_view(request, asset_id):
             else:
                 recent_reports_ids += "%d" % recent_temp.id
 
-    context = {'asset': asset, 'units':units, 'unit':unit, 'recent_reports':recent_reports, 'recent_reports_ids':recent_reports_ids}
+    context = {'asset': asset, 'units':units, 'unit':unit,'recent_reports_ids':recent_reports_ids}
     return render(request, 'orgs/asset.html', context)
 
 def unit(request, node_id):
@@ -376,11 +390,6 @@ def unit(request, node_id):
         else:
             anal = Analyst(name=analystID)
             anal.save()
-        #if Severity.objects.filter(name=sevID).exists():
-            #sev = Severity.objects.get(name=sevID)
-        #else:
-            #sev = Severity(name=sevID)
-            #tech.save()
         cond = Condition(severityLevel=sevID, technology=tech, analyst=anal, entry_date=entry, work_req=req, work_order=order)
         cond.save()
         unitObj = Unit.objects.get(id=node_id)
@@ -434,9 +443,13 @@ def create_entry(request, node_id):
         p_fault_list = []
         for fault in p_faults:
             if FaultGroup.objects.filter(fault=fault['fault'], fault_group=fault['faultGroup']).exists():
-                p_fault_list.append(FaultGroup.objects.get(fault=fault['fault'], fault_group=fault['faultGroup']))
+                p_new_fault = FaultGroup.objects.get(fault=fault['fault'], fault_group=fault['faultGroup'])
+                p_new_fault.used_amount += 1
+                p_fault_list.append(p_new_fault)
+                p_new_fault.save()
             else:
-                p_new_fault = FaultGroup(fault=fault['fault'], fault_group=fault['faultGroup'])
+                p_new_fault = FaultGroup(fault=fault['fault'], fault_group=fault['faultGroup'], used_amount=0)
+                p_new_fault.used_amount += 1
                 p_fault_list.append(p_new_fault)
                 p_new_fault.save()
         cond = Condition(severityLevel=sevID, technology=tech, analyst=anal, entry_date=entry, data_collection_date=collection)
@@ -497,9 +510,14 @@ def edit_entry(request, report_id):
         p_fault_list = []
         for fault in p_faults:
             if FaultGroup.objects.filter(fault=fault['fault'], fault_group=fault['faultGroup']).exists():
-                p_fault_list.append(FaultGroup.objects.get(fault=fault['fault'], fault_group=fault['faultGroup']))
+                p_fault = FaultGroup.objects.get(fault=fault['fault'], fault_group=fault['faultGroup'])
+                if Report.objects.filter(id=report_id, fault_group=p_fault).exists():
+                    p_fault.used_amount += 1
+                    p_fault.save()
+                p_fault_list.append(p_fault)
             else:
-                p_new_fault = FaultGroup(fault=fault['fault'], fault_group=fault['faultGroup'])
+                p_new_fault = FaultGroup(fault=fault['fault'], fault_group=fault['faultGroup'], used_amount=0)
+                p_new_fault.used_amount += 1
                 p_fault_list.append(p_new_fault)
                 p_new_fault.save()
 
@@ -560,6 +578,100 @@ def edit_entry(request, report_id):
                 'analysts': analysts, 'technology': technologies, 'faults_list':faults_list,
                 'pre_faults_list':list(pre_faults_list.values()), 'attachments':attachments, 'attachments_list':attachments_list}
     return render(request, 'orgs/edit_entry.html', context)
+
+def continue_entry(request, report_id):
+    if request.method == "POST":
+        techID = request.POST['technology']
+        analystID = request.POST['analysts']
+        sevID = request.POST['severity']
+        entry = request.POST['entryDate']
+        collection = request.POST['collectionDate']
+        p_faultTable = request.POST['faults']
+        rec = request.POST['recommendation']
+        comm = request.POST['comment']
+
+        p_faults = json.loads(p_faultTable)
+
+        if Technology.objects.filter(name=techID).exists():
+            tech = Technology.objects.get(name=techID)
+        else:
+            tech = Technology(name=techID)
+            tech.save()
+        if Analyst.objects.filter(name=analystID).exists():
+            anal = Analyst.objects.get(name=analystID)
+        else:
+            anal = Analyst(name=analystID)
+            anal.save()
+        p_fault_list = []
+        for fault in p_faults:
+            if FaultGroup.objects.filter(fault=fault['fault'], fault_group=fault['faultGroup']).exists():
+                p_fault = FaultGroup.objects.get(fault=fault['fault'], fault_group=fault['faultGroup'])
+                if Report.objects.filter(id=report_id, fault_group=p_fault).exists():
+                    p_fault.used_amount += 1
+                    p_fault.save()
+                p_fault_list.append(p_fault)
+            else:
+                p_new_fault = FaultGroup(fault=fault['fault'], fault_group=fault['faultGroup'], used_amount=0)
+                p_new_fault.used_amount += 1
+                p_fault_list.append(p_new_fault)
+                p_new_fault.save()
+
+        p_report = Report.objects.filter(id=report_id)
+        for report in p_report: # this is because .get does not sync threads so have to use filter/for
+            condition = Condition.objects.get(id=report.condition.id)
+            condition.technology = tech
+            condition.severityLevel = sevID
+            condition.analyst = anal
+            condition.entry_date = entry
+            condition.data_collection_date=collection
+            condition.save()
+
+            report.comment = comm
+            report.recommendation = rec
+            report.save()
+            report.fault_group.set(p_fault_list)
+
+        # Attachments
+        new_attachments = request.POST.getlist('attachments')
+        existing_attachments = Attachment.objects.filter(report_instance=p_report[0])
+
+        for urls in existing_attachments:
+            if urls.file not in new_attachments:
+                urls.delete()
+
+        new_attachments = request.FILES.getlist('attachments')
+        for attachment in new_attachments:
+            print("new attachment")
+            new_attachment = Attachment(file=attachment)
+            new_attachment.report_instance = p_report[0]
+            new_attachment.save()
+
+        return JsonResponse({"data": ""}, status=200)
+
+    report = Report.objects.get(id=report_id)
+    #print(report)
+    technologies = Technology.objects.all()
+    analysts = Analyst.objects.all()
+    severities = {'GOOD','MISSED','LOW', 'MEDIUM','HIGH','MED-HIGH'}
+    faults_list = FaultGroup.objects.all()
+
+    try:
+        pre_entry_date = report.condition.entry_date.isoformat()
+    except:
+        pre_entry_date = None
+    try:
+        pre_collection_date = report.condition.data_collection_date.isoformat()
+    except:
+        pre_collection_date = None
+    pre_faults_list = report.fault_group
+
+    attachments = Attachment.objects.filter(report_instance=report)
+    attachments_list = serializers.serialize('json', attachments)
+
+    context = {'entry_date': pre_entry_date, 'collection_date':pre_collection_date, 'report':report, 'unit_id':report.unit.id, 'severities':severities,
+                'analysts': analysts, 'technology': technologies, 'faults_list':faults_list,
+                'pre_faults_list':list(pre_faults_list.values()), 'attachments':attachments, 'attachments_list':attachments_list}
+    return render(request, 'orgs/continue_entry.html', context)
 
 def rename_node(request, node_id):
     if request.method == 'POST':
@@ -670,12 +782,13 @@ def create_child_node(request, node_id):
             #Company -> Function
             new_function = Function(name=newName, description=newDesc)
             new_function.save()
-            unit = Unit.objects.get(id=node_id)
-            if unit.function == None:
+            unit_name = UnitName.objects.get(id=node_id)
+            unit = Unit.objects.filter(name=unit_name, function=None).first()
+            if unit:
                 unit.function = new_function
                 unit.save()
             else:
-                new_unit = Unit(name=unit.name, function=new_function)
+                new_unit = Unit(name=unit_name, function=new_function)
                 new_unit.save()
         elif (level == "2"):
             #Function -> Asset
@@ -703,12 +816,61 @@ def create_child_node(request, node_id):
 
     return JsonResponse({"data": ""}, status=400)
 
+def tree_create_copy(request, node_id):
+    if request.method == 'POST':
+        level = request.POST['level']
+        unit = Unit.objects.get(id=node_id)
+
+        if(level == "2"):
+            copyF = Function(name=unit.function.name, description=unit.function.description)
+            copyF.save()
+
+            copy = Unit(name=unit.name, function=copyF)
+            copy.save()
+        elif(level == "3"):
+            copyA = Asset(name=unit.asset.name, description=unit.asset.description)
+            copyA.save()
+
+            copy = Unit(name=unit.name, function=unit.function, asset=copyA)
+            copy.save()
+        elif(level == "4"):
+            copyC = Component(name=unit.component.name, description=unit.component.description)
+            copyC.save()
+
+            copy = Unit(name=unit.name, function=unit.function, asset=unit.asset, component=copyC)
+            copy.save()
+        else:
+            return JsonResponse({"data": ""}, status=400)
+        return JsonResponse({"data": ""}, status=200)
+
+    return JsonResponse({"data": ""}, status=400)
+
 def show_attachments(request, attachment_url):
     # Attachments stored in 'uploads'
     document_root = str(settings.MEDIA_ROOT)
     return serve(request, attachment_url, document_root=document_root)
 
 def remove_node(request, node_id):
+    if request.method == 'POST':
+        unit = Unit.objects.get(id=node_id)
+        level = request.POST['level']
+
+        if (level == "2"):
+            unit_functions = Unit.objects.filter(name=unit.name, function=unit.function)
+            for unit in unit_functions:
+                unit.function = None
+                unit.asset = None
+                unit.component = None
+                unit.save()
+        elif (level == "3"):
+            unit_assets = Unit.objects.filter(name=unit.name, function=unit.function, asset=unit.asset)
+            for unit in unit_assets:
+                unit.asset = None
+                unit.component = None
+                unit.save()
+        elif (level == "4"):
+            unit.delete()
+        return JsonResponse({"data": ""}, status=200)
 
     return JsonResponse({"data": ""}, status=400)
 
@@ -763,6 +925,12 @@ def admin_create_company(request):
         company = request.POST['company']
 
         UnitName(name=company).save()
+        return JsonResponse({"data": ""}, status=200)
+    return JsonResponse({"data": ""}, status=400)
+
+def admin_delete_company(request, company_id):
+    if request.method == 'POST':
+        UnitName.objects.get(id=company_id).delete()
         return JsonResponse({"data": ""}, status=200)
     return JsonResponse({"data": ""}, status=400)
 
@@ -859,5 +1027,40 @@ def create_report(request, node_id):
     context = {}
     return render(request, 'orgs/unit.html', context)
 
-def report(request):
-    return render(request, 'orgs/report.html')
+def report(request, report_id):
+    if request.method == 'GET':
+        report = Report.objects.get(id=report_id)
+        fault_list = report.fault_group.all()
+        serialized_fault_list = serializers.serialize('json', fault_list)
+        return JsonResponse({"faults": serialized_fault_list, "tech": report.condition.technology.name, "sevLevel":report.condition.severityLevel,
+                            "entryDate": report.condition.entry_date, "comment":report.comment, "recommendation":report.recommendation}, status=200)
+    return JsonResponse({"data": ""}, status=400)
+
+def get_table_reports_company(request):
+    if request.method == 'GET':
+        type = request.GET['type']
+        company = request.GET['company']
+
+        if type == 'openReports':
+            reports = Report.objects.filter(unit__name__name=company,condition__closed=False)
+            serialized_reports = serializers.serialize('json', reports)
+            data = {'reports': serialized_reports}
+            return JsonResponse(data, status=200)
+        elif type == 'recentReports':
+            return JsonResponse({"data": ""}, status=200)
+        elif type == 'allReports':
+            return JsonResponse({"data": ""}, status=200)
+
+    return JsonResponse({"data": ""}, status=400)
+
+def close_report(request, report_id):
+    if request.method == 'POST':
+        report = Report.objects.get(id=report_id)
+        report.condition.closed = True
+        report.condition.close_date = request.POST['closeDate']
+        report.condition.reason = request.POST['reason']
+        report.condition.save()
+        report.save()
+        return JsonResponse({"data": ""}, status=200)
+
+    return JsonResponse({"data": ""}, status=400)

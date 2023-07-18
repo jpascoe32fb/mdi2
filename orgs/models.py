@@ -87,6 +87,7 @@ class Unit(models.Model):
 class FaultGroup(models.Model):
     fault = models.CharField(max_length=200, null=True, blank=True)
     fault_group = models.CharField(max_length=250, null=True, blank=True)
+    used_amount = models.PositiveIntegerField(null=True, blank=True, default=int(0))
 
     def __str__(self):
         return f"{self.fault}"

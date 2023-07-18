@@ -48,10 +48,14 @@
             <div class="section-header"><strong>Condition Entry Data</strong></div>
             <div>Technology: {{report.condition.technology}}</div>
             <div>Analyst: {{report.condition.analyst}}</div>
-            <div>Severity: {{report.condition.severity}}</div>
-            <div>Entry Date: {{report.condition.entry_date}}</div>
-            <div>Work Request: </div>
-            <div>Work Order: </div>
+            <div>Severity: {{report.condition.severityLevel}}</div>
+            <div>Condition Entry Date: {{report.condition.entry_date}}</div>
+            <div>Data Collection Date: {{report.condition.data_collection_date}}</div>
+            {% if report.condition.closed %}
+            <br>
+            <div>Closed Date: {{report.condition.close_date}}</div>
+            <div>Reason: {{report.condition.reason}}</div>
+            {% endif %}
         </div>
 
         <div class="container mt-3">
@@ -62,11 +66,19 @@
                         <th>Fault</th>
                         <th>Fault Group</th>
                     </tr>
-                    <tr>
-                        <!--**Make fault a foreign key and loop this**-->
-                        <td>{{report.fault}}</td>
-                        <td>***Empty***</td>
-                    </tr>
+                        {% if fault_list %}
+                            {% for fault in fault_list %}
+                            <tr>
+                                <td>{{fault.fault}}</td>
+                                <td>{{fault.fault_group}}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td>None</td>
+                            <td>None</td>
+                        </tr>
+                        {% endif %}                        
                 </table>
             </div>
         </div>
@@ -83,7 +95,7 @@
             <div>{{report.comment}}</div>
         </div>
 
-        <div class="container mt-3">
+        <!--div class="container mt-3">
             <div class="section-header"><strong>Analyst Comments and Recommendations</strong></div>
         </div>
 
@@ -93,7 +105,7 @@
 
         <div class="container mt-3">
             <div class="section-header"><strong>Linked Documents</strong></div>
-        </div>
+        </div-->
         
     </body>
 </html>

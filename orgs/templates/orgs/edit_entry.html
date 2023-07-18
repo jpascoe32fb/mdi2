@@ -21,32 +21,35 @@
     {% csrf_token %}
     <div class="form-group mb-3 col-4">
       <label for="technology">Technology:</label>
-      <input class="form-control" id="technology" name="technology" list="technologyList" value="{{report.condition.technology}}" required>
-      <datalist id="technologyList">
-        {% for tech in technology %}
-          <option value="{{ tech.name }}">{{ tech.name }}</option>
-        {% endfor %}
-      </datalist>
+      <select class="form-control form-select" id="technology" name="technology" list="technologyList" value="{{report.condition.technology}}" required>
+        <datalist id="technologyList">
+          {% for tech in technology %}
+            <option value="{{ tech.name }}">{{ tech.name }}</option>
+          {% endfor %}
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
       <label for="analysts">Analyst:</label>
-      <input class="form-control" id="analysts" name="analysts" list="analystList" value="{{report.condition.analyst}}" required>
-      <datalist id="analystList">
-        {% for analyst in analysts %}
-          <option value="{{ analyst.name }}">{{ analyst.name }}</option>
-        {% endfor %}
-      </datalist>
+      <select class="form-control form-select" id="analysts" name="analysts" list="analystList" value="{{report.condition.analyst}}" required>
+        <datalist id="analystList">
+          {% for analyst in analysts %}
+            <option value="{{ analyst.name }}">{{ analyst.name }}</option>
+          {% endfor %}
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
       <label for="severity">Severity:</label>
-      <input class="form-control" id="severity" name="severity" list="severityList" value="{{report.condition.severityLevel}}" required>
-      <datalist id="severityList">
+      <select class=" form-control form-select" id="severity" name="severity" list="severityList" value="{{report.condition.severityLevel}}" required>
+        <datalist id="severityList">
         {% for severity in severities %}
           <option value="{{ severity }}">{{ severity }}</option>
         {% endfor %}
-      </datalist>
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
@@ -140,7 +143,7 @@
   </div>
 </div>
 
-<!-- Secondary Modal -->
+<!-- Fault Modal -->
 <div class="modal fade" id="faultModal" tabindex="-1" role="dialog" aria-labelledby="secondaryModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -215,6 +218,7 @@
       var selectedImages = [];
 
       function on_load() {
+          // Load Faults table pre-entries
           var table = document.getElementById('faultTable');
           var pre_faults = {{ pre_faults_list|safe }};
           for(var i = 0; i < pre_faults.length; i++) {
@@ -226,6 +230,7 @@
               faultGroupCell.innerHTML = pre_faults[i]['fault_group'];
               clear.innerHTML = "<button type='button' class='btn btn-outline-secondary' onClick='removeRow(this)'>X</button>";
           }
+          // Handle attachment entries
           var attachments = JSON.parse('{{ attachments_list|escapejs }}');
           for(var i = 0; i < attachments.length; i++) {
             selectedImages.push(attachments[i].fields.file);
@@ -320,7 +325,6 @@
     </script>
 
     <script>
-
       $(document).ready(function() {
         function getCookie(name) {
           var cookieValue = null;
@@ -426,6 +430,20 @@
         
         var form = document.getElementById("form-id");
         form.addEventListener("submit", handleSubmit);
+
+        // Set default values of DropDowns (sev, analyst, tech)
+        var severity = "{{report.condition.severityLevel}}";
+        var analyst = "{{report.condition.analyst}}";
+        var technology = "{{report.condition.technology}}";
+        
+        var sevElement = document.getElementById("severity");
+        sevElement.value = severity;
+
+        var anElement = document.getElementById("analysts");
+        anElement.value = analyst;
+
+        var techElement = document.getElementById("technology");
+        techElement.value = technology;
       });        
   </script>
 

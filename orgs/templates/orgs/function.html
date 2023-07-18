@@ -1,1 +1,41 @@
 {% extends 'orgs/main.html' %}
+
+{% block content %}
+    <a href="/" class="btn btn-outline-secondary btn-sm">&laquo; Back</a>
+
+    <br><br>
+    <h5>{{unit.name}} / {{unit.function}}</h5>
+
+    <h3>Component List for {{ function }}</h3>
+
+    <!-- convert to JSData Table ?-->
+    <div class="card card-body">
+        <table class="table table-sm">
+            <tr>
+                <th>Unit</th>
+                <th>Function</th>
+                <th>Asset</th>
+                <th>Component</th>
+            </tr>
+
+            {% for unit in units %}
+                <tr>
+                    <td>{{unit.name}}</td>
+                    <td>{{unit.function}}</td>
+                    <td>{{unit.asset}}</td>
+                    {% if unit.component != None %}
+                        <td><a href="/unit/{{unit.id}}">{{unit.component}}</a></td>
+                    {% else %}
+                        <td>None</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    {% if recent_reports_ids != "" %}
+    <div>Print Recent Reports</div>
+        <a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=recent_reports_ids %}?format=pdf" target="_blank">PDF</a>
+    {% endif %}
+
+{% endblock content %}
