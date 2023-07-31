@@ -1,6 +1,14 @@
 {% extends 'orgs/main.html' %}
 
 {% block content %}
+<style>
+  .image-preview {
+    max-width: 500px;
+    max-height: 500px;
+    margin: 5px;
+  }
+</style>
+
 <button type="button" id="back" class="btn btn-outline-secondary btn-sm">&laquo; Back</button>
 
 <script>
@@ -288,9 +296,12 @@
       function displayAttachmentOnLoad(imageSrc, file) {
         var imagePreviewContainer = $('#image-preview-container');
         var imageElement = $('<div>').addClass('image-preview');
-        var img = $('<img>').attr('src', "../" + imageSrc).addClass('preview-image');
+        
+        var downloadLink = $('<a>').attr('href', "../" + imageSrc).attr('target', '_blank');
+        var img = $('<img>').attr('src', "../" + imageSrc).attr('alt', "Error").addClass('image-preview');
+        
         var removeButton = $('<button>').addClass('btn btn-outline-secondary remove-btn').text('X');
-        imageElement.append(img, removeButton);
+        imageElement.append(downloadLink.append(img), removeButton);
         imagePreviewContainer.append(imageElement);
         // Attach event listener to the remove button
         removeButton.on('click', function() {
@@ -302,7 +313,7 @@
       function displayAttachment(imageSrc, file) {
         var imagePreviewContainer = $('#image-preview-container');
         var imageElement = $('<div>').addClass('image-preview');
-        var img = $('<img>').attr('src', imageSrc).addClass('preview-image');
+        var img = $('<img>').attr('src', imageSrc).addClass('image-preview');
         var removeButton = $('<button>').addClass('btn btn-outline-secondary remove-btn').text('X');
         imageElement.append(img, removeButton);
         imagePreviewContainer.append(imageElement);

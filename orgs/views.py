@@ -307,7 +307,10 @@ def detailed_condition(request, report_id):
     report = Report.objects.get(id=report_id)
     fault_list = report.fault_group.all()
 
-    context = {'report': report, 'fault_list': fault_list}
+    attachments = Attachment.objects.filter(report_instance=report)
+    attachments_list = serializers.serialize('json', attachments)
+
+    context = {'report': report, 'fault_list': fault_list, 'attachments_list': attachments_list}
     return render(request, 'orgs/detailed_condition.html', context)
 
 def company_view(request, node_id):

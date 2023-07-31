@@ -28,6 +28,12 @@
                 margin-left: 250px;
                 padding: 10px;
             }
+            .modal-backdrop.fade.show {
+                //display: none;
+            }
+            .modal {
+                z-index: 1060;
+            }
         </style>
 
         <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
@@ -54,6 +60,78 @@
             <h5>MDI Report Writer</h5>
         </main>
         <tree>{% include 'orgs/tree.html' %}</tree>
+
+        <!-- Modals for the JStree -->
+        <!-- Need to be here instead of tree.html as need to be inside of <body> for 
+             proper z level placement
+        -->
+        <div class="modal fade" id="renameModal" tabindex="-1" role="dialog" aria-labelledby="renameModalLabel" aria-hidden="true" data-backdrop="false">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="renameModalLabel">Modify {{node.original.text}}</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form method="POST" id="renameForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                      <label for="newNameInput">Set Name:</label>
+                      <input type="text" class="form-control" id="newNameInput" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="newDescInput">Set Description:</label>
+                      <textarea class="form-control" id="newDescInput"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true" data-backdrop="false">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteModalLabel">Delete {{node.original.text}}</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form method="POST" id="deleteForm">
+                    {% csrf_token %}
+                    <p>Are you sure you want to delete this Node?</p>
+                    <p>Everything below it in the hierarchy will also be deleted!</p>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true" data-backdrop="false">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="confirmModalLabel">Are You Sure?</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form method="POST" id="confirmForm">
+                    {% csrf_token %}
+                    <p>This will create a copy of the selected Node.</p>
+                    <button type="submit" class="btn btn-primary">Confirm</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
         
     </body>
     

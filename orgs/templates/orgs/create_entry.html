@@ -1,6 +1,14 @@
 {% extends 'orgs/main.html' %}
 
 {% block content %}
+<style>
+  .image-preview {
+    max-width: 500px;
+    max-height: 500px;
+    margin: 5px;
+  }
+</style>
+
 <a href="/unit/{{ unit_id }}" class="btn btn-outline-secondary btn-sm">&laquo; Back</a>
 
 <!-- Create Report Form -->
@@ -14,32 +22,35 @@
     {% csrf_token %}
     <div class="form-group mb-3 col-4">
       <label for="technology">Technology:</label>
-      <input class="form-control" id="technology" name="technology" list="technologyList" required>
-      <datalist id="technologyList">
-        {% for tech in technology %}
-          <option value="{{ tech.name }}">{{ tech.name }}</option>
-        {% endfor %}
-      </datalist>
+      <select class="form-control form-select" id="technology" name="technology" list="technologyList" value="{{report.condition.technology}}" required>
+        <datalist id="technologyList">
+          {% for tech in technology %}
+            <option value="{{ tech.name }}">{{ tech.name }}</option>
+          {% endfor %}
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
       <label for="analysts">Analyst:</label>
-      <input class="form-control" id="analysts" name="analysts" list="analystList" required>
-      <datalist id="analystList">
-        {% for analyst in analysts %}
-          <option value="{{ analyst.name }}">{{ analyst.name }}</option>
-        {% endfor %}
-      </datalist>
+      <select class="form-control form-select" id="analysts" name="analysts" list="analystList" value="{{report.condition.analyst}}" required>
+        <datalist id="analystList">
+          {% for analyst in analysts %}
+            <option value="{{ analyst.name }}">{{ analyst.name }}</option>
+          {% endfor %}
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
       <label for="severity">Severity:</label>
-      <input class="form-control" id="severity" name="severity" list="severityList" required>
-      <datalist id="severityList">
+      <select class=" form-control form-select" id="severity" name="severity" list="severityList" value="{{report.condition.severityLevel}}" required>
+        <datalist id="severityList">
         {% for severity in severities %}
           <option value="{{ severity }}">{{ severity }}</option>
         {% endfor %}
-      </datalist>
+        </datalist>
+      </select>
     </div>
 
     <div class="form-group mb-3 col-4">
@@ -232,7 +243,7 @@
     function displayAttachment(imageSrc, file) {
       var imagePreviewContainer = $('#image-preview-container');
       var imageElement = $('<div>').addClass('image-preview');
-      var img = $('<img>').attr('src', imageSrc).addClass('preview-image');
+      var img = $('<img>').attr('src', imageSrc).addClass('image-preview');
       var removeButton = $('<button>').addClass('btn btn-outline-secondary remove-btn').text('X');
       imageElement.append(img, removeButton);
       imagePreviewContainer.append(imageElement);

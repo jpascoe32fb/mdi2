@@ -13,6 +13,7 @@ urlpatterns = [
     path('asset/<int:asset_id>/', views.asset_view, name='asset'),
     path('generate-pdf/<str:report_ids>/', views.generate_pdf, name='generate_pdf'),
     path('detailed-condition/<int:report_id>/', views.detailed_condition, name='detailed_condition'),
+    path('detailed-condition/<path:attachment_url>/', views.show_attachments, name="show_attachments"),
     path('create-entry/<int:node_id>/', views.create_entry, name='create_entry'),
     path('edit-entry/<int:report_id>/', views.edit_entry, name='edit_entry'),
     path('edit-entry/<path:attachment_url>/', views.show_attachments, name="show_attachments"),
