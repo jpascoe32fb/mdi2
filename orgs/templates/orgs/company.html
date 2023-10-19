@@ -124,9 +124,11 @@
             <th>Analyst</th>
             <th>PDF</th>
             <th>Details</th>
+            {% if write_perms %}
             <th>Edit</th>
             <th>Continue</th>
             <th>Close</th>
+            {% endif %}
             </tr>
         </thead>
         <tbody id="tableBody">
@@ -143,6 +145,7 @@
                     <td>{{report.condition.analyst}}</td>
                     <td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td>
                     <td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>
+                    {% if write_perms %}
                     <td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td>
                     <td>
                         {% if report.condition.closed != 1 %}
@@ -154,6 +157,7 @@
                             <button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>
                         {% endif %}
                      </td>
+                     {% endif %}
                 </tr>
             {% endfor %}
         </tbody>
@@ -250,17 +254,20 @@ $(document).ready(function() {
         const tableBody = document.getElementById('tableBody');
         tableBody.innerHTML = ' ';
         if(reportType == "allReports") {
-            tableBody.innerHTML = '{% for report in all_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td><td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td></tr>{% endfor %}';
+            tableBody.innerHTML = '{% for report in all_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>{% if write_perms %}<td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td>{% endif %}</tr>{% endfor %}';
         } else if (reportType == "recentReports") {
-            tableBody.innerHTML = '{% for report in recent_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td><td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td></tr>{% endfor %}';
+            tableBody.innerHTML = '{% for report in recent_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>{% if write_perms %}<td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td>{% endif %}</tr>{% endfor %}';
         } else if (reportType == "openReports") {
-            tableBody.innerHTML = '{% for report in open_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td><td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td></tr>{% endfor %}';
+            tableBody.innerHTML = '{% for report in open_reports %}<tr><td>{{report.unit.component}}</td>{% if report.condition.closed %}<td><input class="form-check-input" type="checkbox" checked disabled></td>{% else %}<td><input class="form-check-input" type="checkbox"  disabled></td>{% endif %}     <td>{{report.condition.entry_date}}</td><td class="{{report.condition.severityLevel}}">{{report.condition.severityLevel}}</td><td>{{report.condition.analyst}}</td><td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td><td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>{% if write_perms %}<td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td><td>{% if report.condition.closed != 1 %}<a class="btn btn-secondary" href="{% url 'continue_entry' report_id=report.id %}">Continue</a>{% endif %}</td><td>{% if report.condition.closed != 1 %}<button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>{% endif %}</td>{% endif %}</tr>{% endfor %}';
         }
+        let numberOfColumns = $(table).find('thead th').length;
+        let nonOrderableCount = (numberOfColumns > 7) ? 6 : 3;
+        let nonOrderableColumns = Array.from({length: nonOrderableCount}, (_, i) => numberOfColumns - 1 - i);
         $(table).DataTable({
             // Pagination
             "pagingType": "full_numbers",
             columnDefs: [
-                { orderable: false, targets: [4, 5, 6, 7, 8, 9] },
+                { orderable: false, targets: nonOrderableColumns },
                 { type: 'dom-checkbox', targets: [1] } 
             ],
             stateSave: true,
@@ -394,12 +401,14 @@ $(document).ready(function() {
             return $('input', td).prop('checked') ? '1' : '0';
         });
     };
-
+    let numberOfColumns = $(table).find('thead th').length;
+    let nonOrderableCount = (numberOfColumns > 7) ? 6 : 3;
+    let nonOrderableColumns = Array.from({length: nonOrderableCount}, (_, i) => numberOfColumns - 1 - i);
     $('#entryTable').DataTable({
         // Pagination
         "pagingType": "full_numbers",
         columnDefs: [
-            { orderable: false, targets: [4, 5, 6, 7, 8, 9] },
+            { orderable: false, targets: nonOrderableColumns },
             { type: 'dom-checkbox', targets: [1] } 
         ],
         stateSave: true,

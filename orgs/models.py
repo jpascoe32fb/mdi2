@@ -1,5 +1,6 @@
 from django.db import models
 import os
+from django.contrib.auth.models import Group
 # Create your models here.
 
 class Severity(models.Model):
@@ -46,6 +47,7 @@ class Condition(models.Model):
 class UnitName(models.Model):
     name = models.CharField(max_length=200, null=True)
     description = models.TextField(null=True, blank=True)
+    groups = models.ManyToManyField(Group)
     def __str__(self):
         return self.name
 
@@ -72,6 +74,10 @@ class PlantTag(models.Model):
     def __str__(self):
         return self.name
 
+class UnitManager(models.Manager):
+    def for_user(self, user):
+        user_groups = user.groups.all()
+        return super().get_queryset().filter(name__groups__in=user_groups)
 
 class Unit(models.Model):
     name = models.ForeignKey(UnitName, null=True, on_delete=models.SET_NULL)
@@ -80,6 +86,7 @@ class Unit(models.Model):
     component = models.OneToOneField(Component, null=True, blank=True, on_delete=models.SET_NULL)
     plant_tag = models.ForeignKey(PlantTag, null=True, blank=True, on_delete=models.SET_NULL)
     #report = models.ForeignKey(Report, null=True, on_delete=models.SET_NULL)
+    objects = UnitManager()
     
     def __str__(self):
         return f"{self.name.name} {self.component}"
@@ -100,7 +107,7 @@ class Report(models.Model):
     fault = models.CharField(max_length=1000, null=True)
     fault_group = models.ManyToManyField(FaultGroup, blank=True)
     comment = models.CharField(max_length=1200, null=True) #can be converted to textField(s)
-    recommendation = models.CharField(max_length=1200, null=True)
+    recommendation = models.CharField(max_length=1200, null=True) #can be converted to textField(s)
 
     def __str__(self):
         try:

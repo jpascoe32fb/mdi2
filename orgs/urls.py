@@ -1,11 +1,12 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from .models import Report
 #from .views import get_unit_tree_data
 
 
 urlpatterns = [
-    path('', views.home),
+    path('', views.home, name='home'),
+    path('', include('django.contrib.auth.urls')),
     path('unit_tree_data/', views.get_unit_tree_data),
     path('unit/<int:node_id>/', views.unit, name='unit'),
     path('company/<int:node_id>/', views.company_view, name='company'),

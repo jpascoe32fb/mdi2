@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, reverse
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.db.models import Count, Max, Subquery, OuterRef
 
 from reportlab.pdfgen import canvas
@@ -26,7 +26,22 @@ from django.conf import settings
 from django.views.static import serve
 from pathlib import Path
 
+#from functools import wraps
+from django.contrib.auth.decorators import login_required
+from .decorators import group_required
+
 from .models import *
+
+"""
+To fetch only units available to a specific user
+use the command
+units = Unit.objects.for_user(request.user)
+"""
+
+#ex: units = get_units_for_user(request.user)
+def get_units_for_user(user):
+    user_groups = user.groups.all()
+    return Unit.objects.filter(name_groups__in = user_groups)
 
 #for safely returning instances from a model even if none exist | use model.objects.get for single instances
 #ie. if a unit doesn't have any reports yet
@@ -38,7 +53,15 @@ def safe_get(model, **kwargs):
         return None
 
 def get_unit_tree_data(request):
-    units = UnitName.objects.all()
+    """
+    This function creates the JSON response to create the JSTree.
+    Pulls all UnitName objects and each subsequent part so that duplicated leaf nodes
+    are represented under the same leaf (dropdown). It is currently called everytime
+    a page is loaded with the tree on it.
+    """
+    #units = UnitName.objects.all()
+    user_groups = request.user.groups.all()
+    units = UnitName.objects.filter(groups__in=user_groups)
     unit_data = []
     processed_names = set()
     #processed_functions = set()
@@ -89,24 +112,43 @@ def get_unit_tree_data(request):
     #print(unit_data)
     return JsonResponse(unit_data, safe=False)
 
-
+@login_required
+@group_required
 def home(request):
-    units = Unit.objects.all()
+    """
+    This is the function for the dashboard page.
+    """
+    #units = Unit.objects.all()
+    units = Unit.objects.for_user(request.user)
     tree = []
     reports = Report.objects.all()
 
-    #GetReports function ??
-    #Report.objects.filter(name="PUREPOWER",component="switch") for example to get the distinct reports
-    #create view function or template function that is called when querying specific reports in the html ->
-    #   goes to separate form that loads the reports for main dashboard 
-
     context = {'units':units, 'reports':reports, 'tree':tree}
     return render(request, 'orgs/dashboard.html', context)
+
+def login(request):
+
+    if user_authenticated:
+        return redirect('home')
+    
+    print("In login\n")
+
+    context = {}
+    return render(request, 'orgs/login.html', context)
 
 def about(request):
     return render(request, 'orgs/about.html')
 
 def generate_pdf(request, report_ids):
+    """
+    This is the function that generates pdf reports. It utilizes reportlib and
+    matplotlib pyplots. Each page is dynamically generated based off of a varying 
+    amount of components placed in the report.
+    Page 1: Logo Page
+    Page 2: Pie Chart Page
+    Page 3: Condition Entry Tables Summary
+    Page 4+: Condition Entry Details
+    """
     report_ids = report_ids.split(',')
     reports = Report.objects.filter(id__in=report_ids)
 
@@ -132,7 +174,7 @@ def generate_pdf(request, report_ids):
     # Add general statistics to the next page
     p.showPage()
     p.setFont(psfontname='Helvetica', size=18)
-    p.drawString(x=225, y=750, text="Condition Entry Summary")
+    p.drawString(x=220, y=760, text="Condition Entry Summary")
 
     severeties = [report.condition.severityLevel for report in reports]
     severity_counts = Counter(severeties)
@@ -159,8 +201,13 @@ def generate_pdf(request, report_ids):
     }
     plt.figure(figsize=(6, 6))
     sev_pie_colors = [sev_color_codes[severity] for severity in df['severity']]
-    plt.pie(df['count'], labels=df['severity'], colors=sev_pie_colors, autopct='%1.1f%%')
+    patches, texts, autotexts = plt.pie(df['count'], labels=df['severity'], colors=sev_pie_colors, autopct='%1.1f%%')
     plt.title('Severity Distribution')
+    for text in texts:
+        text.set_size(12)
+        text.set_color('gray')
+    for autotext in autotexts:
+        autotext.set_size(10)
 
     #Save the chart
     sev_buffer = BytesIO()
@@ -194,6 +241,7 @@ def generate_pdf(request, report_ids):
     p.showPage()
     p.setFont(psfontname='Helvetica', size=15)
     p.drawString(x=15, y=805, text="Condition Entry Summary")
+
     col_widths = [90, 125, 105, 125, 115]
     scale_factor = 1.0
     col_widths_scaled = [width * scale_factor for width in col_widths]
@@ -304,6 +352,12 @@ def generate_pdf(request, report_ids):
     return response
 
 def detailed_condition(request, report_id):
+    """
+    This is the function called when a detailed page is loaded. It
+    pulls all of the data about the specific report and adds it to the 
+    page's context.
+    report_id: The specific id of a report called by a button.
+    """
     report = Report.objects.get(id=report_id)
     fault_list = report.fault_group.all()
 
@@ -313,7 +367,15 @@ def detailed_condition(request, report_id):
     context = {'report': report, 'fault_list': fault_list, 'attachments_list': attachments_list}
     return render(request, 'orgs/detailed_condition.html', context)
 
+@login_required
+@group_required
 def company_view(request, node_id):
+    """
+    This is the function called when a company page is loaded. It
+    pulls all of the data about a specific company and adds it to the
+    page's context.
+    node_id: The id of the UnitName of the company.
+    """
     unit_name = UnitName.objects.get(id=node_id)
     units = Unit.objects.filter(name=unit_name)
     all_reports = Report.objects.filter(unit__name=unit_name)
@@ -325,11 +387,20 @@ def company_view(request, node_id):
         temp_report = Report.objects.filter(unit=unit).order_by('-condition__entry_date').first()
         if temp_report != None:
             recent_reports.append(temp_report)
+
+    write_perms = request.user.groups.filter(name='Write').exists()
     
-    context = {'unit_name':unit_name, 'units':units, 'open_reports': open_reports, 'all_reports':all_reports, 'recent_reports':recent_reports}
+    context = {'unit_name':unit_name, 'units':units, 'open_reports': open_reports, 'all_reports':all_reports, 
+               'recent_reports':recent_reports, 'write_perms':write_perms}
     return render(request, 'orgs/company.html', context)
 
 def function_view(request, node_id):
+    """
+    This is the function called when a functionality page is loaded. It
+    pulls all of the data about a specific function and adds it to the
+    page's context.
+    node_id: The id of the specific Function.
+    """
     function = Function.objects.get(id=node_id)
     units = Unit.objects.filter(function=function)
     unit = units[0]
@@ -351,6 +422,12 @@ def function_view(request, node_id):
     return render(request, 'orgs/function.html', context)
 
 def asset_view(request, asset_id):   
+    """
+    This is the function called when a asset page is loaded. It
+    pulls all of the data about a specific asset and adds it to the
+    page's context.
+    node_id: The id of the specific Asset.
+    """
     asset = Asset.objects.get(id=asset_id)
     units = Unit.objects.filter(asset=asset)
     unit = units[0]
@@ -372,6 +449,14 @@ def asset_view(request, asset_id):
     return render(request, 'orgs/asset.html', context)
 
 def unit(request, node_id):
+    """
+    This is the function called when a Component page is loaded. It
+    pulls all of the data about a specific Component and adds it to the
+    page's context. It also has a POST check for if a report is made
+    for a specific Component
+    node_id: The id of the specific Component/Unit object.
+    """
+    
     if request.method == 'POST':
         techID = request.POST['technology']
         analystID = request.POST['analysts']
@@ -415,12 +500,20 @@ def unit(request, node_id):
         temp = pie_data[data]
         severity_data.append(temp)
 
+    write_perms = request.user.groups.filter(name='Write').exists()
+
     context = {'unit': unit, 'reports': reports, 'severity_data': severity_data,
-                'severity_labels': severity_labels}
+                'severity_labels': severity_labels, 'write_perms':write_perms}
     return render(request, 'orgs/unit.html', context)
 
 
 def create_entry(request, node_id):
+    """
+    This function is used to populate the create_entry page
+    as well as handle the submission of a new condition in a POST
+    request. This method is called by specific Components
+    node_id: The id of the specific Unit
+    """
     if request.method == 'POST':
         techID = request.POST['technology']
         analystID = request.POST['analysts']
@@ -482,6 +575,13 @@ def create_entry(request, node_id):
     return render(request, 'orgs/create_entry.html', context)
 
 def edit_entry(request, report_id):
+    """
+    This function is used to populate the edit_entry page
+    as well as handle the submission of an updated condition in a POST
+    request. This method is called by specific Components. It pulls all
+    of the previous information about the report so it can be viewed/edited.
+    report_id: The id of the specific Report to edit
+    """
     if request.method == 'POST':
         techID = request.POST['technology']
         analystID = request.POST['analysts']
@@ -583,6 +683,9 @@ def edit_entry(request, report_id):
     return render(request, 'orgs/edit_entry.html', context)
 
 def continue_entry(request, report_id):
+    """
+    
+    """
     if request.method == "POST":
         techID = request.POST['technology']
         analystID = request.POST['analysts']
@@ -677,6 +780,12 @@ def continue_entry(request, report_id):
     return render(request, 'orgs/continue_entry.html', context)
 
 def rename_node(request, node_id):
+    """
+    This function is called by the JSTree when the rename context
+    menu option is selected. It pulls the previous name of the node
+    so that it is autofilled in the input box. The POST method calculates
+    the level it is at and finds the specific node to be updated.
+    """
     if request.method == 'POST':
         level = request.POST['level']
         newName = request.POST['new_name']
@@ -735,6 +844,13 @@ def rename_node(request, node_id):
         return JsonResponse({"name": name, "description": description}, status=200)
 
 def create_here_node(request, node_id):
+    """
+    This function is called by the JSTree when the create_here context
+    menu option is selected. It uses the height (level) of the selected node to 
+    create another node at the same height. Copies the values higher in the tree
+    than the selected node
+    node_id: The id of the specific node selected to create a new one at the same height
+    """
     if request.method == 'POST':
         level = request.POST['level']
         newName = request.POST['new_name']
@@ -776,6 +892,13 @@ def create_here_node(request, node_id):
     return JsonResponse({"data": ""}, status=400)
 
 def create_child_node(request, node_id):
+    """
+    This function is called by the JSTree when the create_child context
+    menu option is selected. It uses the height (level) of the selected node to 
+    create another node at as a leaf. Copies the values higher in the tree
+    than the selected node
+    node_id: The id of the specific node selected to create a new one at the +1 height
+    """
     if request.method == 'POST':
         level = request.POST['level']
         newName = request.POST['new_name']
@@ -820,6 +943,13 @@ def create_child_node(request, node_id):
     return JsonResponse({"data": ""}, status=400)
 
 def tree_create_copy(request, node_id):
+    """
+    This function is called by the JSTree when the create_copy context
+    menu option is selected. It creates a copy of the selected node with
+    the same higher values but not the same children. Both the name and
+    description are copied.
+    node_id: The specific id of the node to copy
+    """
     if request.method == 'POST':
         level = request.POST['level']
         unit = Unit.objects.get(id=node_id)
@@ -849,11 +979,21 @@ def tree_create_copy(request, node_id):
     return JsonResponse({"data": ""}, status=400)
 
 def show_attachments(request, attachment_url):
+    """
+    Serves the attachments when loaded by edit_entry, continue_entry, etc. 
+    Finds the attachments through the media root + the attachment_url.
+    """
     # Attachments stored in 'uploads'
     document_root = str(settings.MEDIA_ROOT)
     return serve(request, attachment_url, document_root=document_root)
 
 def remove_node(request, node_id):
+    """
+    This function is called by the JSTree when the remove context
+    menu option is selected. The POST method calculates the height of the node and
+    sets the values at the node and below it to None (so that the values are still stored
+    in the database in case of mistakes)
+    """
     if request.method == 'POST':
         unit = Unit.objects.get(id=node_id)
         level = request.POST['level']
@@ -878,6 +1018,12 @@ def remove_node(request, node_id):
     return JsonResponse({"data": ""}, status=400)
 
 def move_node(request):
+    """
+    This function is called when the JSTree Drag-n-Drop functionality
+    is utilized. This function does not ensure if it is a possible move,
+    that is done by the tree. It sets the values of the moved node's higher
+    values to their new location's parent's higher values.
+    """
     if request.method == 'POST':
         type = request.POST['type']
         node_uid = request.POST['node_uid']
@@ -1031,6 +1177,12 @@ def create_report(request, node_id):
     return render(request, 'orgs/unit.html', context)
 
 def report(request, report_id):
+    """
+    This function returns a serialized JSON response about a specific report.
+    It is currently called when a report is being closed so that the data can be
+    ajax called.
+    report_id: The specific id of the report to grab
+    """
     if request.method == 'GET':
         report = Report.objects.get(id=report_id)
         fault_list = report.fault_group.all()
@@ -1040,6 +1192,10 @@ def report(request, report_id):
     return JsonResponse({"data": ""}, status=400)
 
 def get_table_reports_company(request):
+    """
+    This function is called for company.html to gather all of the reports
+    based of off different filters to be selected on the page.
+    """
     if request.method == 'GET':
         type = request.GET['type']
         company = request.GET['company']
@@ -1057,6 +1213,11 @@ def get_table_reports_company(request):
     return JsonResponse({"data": ""}, status=400)
 
 def close_report(request, report_id):
+    """
+    This function is called when a report is closed. It sets the proper values to 
+    closed.
+    report_id: The id of the specific report to close
+    """
     if request.method == 'POST':
         report = Report.objects.get(id=report_id)
         report.condition.closed = True

@@ -65,13 +65,16 @@
 </div>
 
 <br>
-<div id="faultTableContainer"></div> 
+<div id="faultTableContainer"></div>
+{% if write_perms %}
 <a type="button" class="btn btn-primary" href="{% url 'create_entry' unit.id %}">Create Entry</a>
+{% endif %}
 <!--button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-issue-modal" -->
     <!--Create Entry-->
 <!--/button-->
-
+{% if write_perms %}
 <a class="btn btn-outline-secondary" href="#" role="button" type="file">Import Entry</a>
+{% endif %}
 <br>
 {% if reports %}
 <br>
@@ -85,9 +88,11 @@
       <th>Analyst</th>
       <th>PDF</th>
       <th>Details</th>
+      {% if write_perms %}
       <th>Edit</th>
       <th>Continue</th>
       <th>Close</th>
+      {% endif %}
     </tr>
   </thead>
   <tbody>
@@ -104,6 +109,7 @@
           <td>{{report.condition.analyst}}</td>
           <td><a class="btn btn-outline-danger" href="{% url 'generate_pdf' report_ids=report.id %}?format=pdf" target="_blank">PDF</a></td>
           <td><a class="btn btn-info" href="{% url 'detailed_condition' report.id %}" target="_blank">Details</a></td>
+          {% if write_perms %}
           <td><a class="btn btn-outline-warning" href="{% url 'edit_entry' report_id=report.id %}">Edit</a></td>
           <td>
             {% if report.condition.closed != 1 %}
@@ -115,6 +121,7 @@
               <button type="button" class="btn btn-danger btn-sm" onclick="handle_close({{report.id}})">Close</button>
             {% endif %}
           </td>
+          {% endif %}
         </tr>
     {% endfor %}
   </tbody>
@@ -281,13 +288,16 @@
           });
       };
 
+      let numberOfColumns = $(table).find('thead th').length;
+      let nonOrderableCount = (numberOfColumns > 7) ? 6 : 3;
+      let nonOrderableColumns = Array.from({length: nonOrderableCount}, (_, i) => numberOfColumns - 1 - i);
       $('#entryTable').DataTable({
-          // Pagination
-          "pagingType": "full_numbers",
-          columnDefs: [
-              { orderable: false, targets: [4, 5, 6, 7, 8, 9] },
-              { type: 'dom-checkbox', targets: [1] } // Assuming the checkboxes are in the 2nd column
-          ],
+        // Pagination
+        "pagingType": "full_numbers",
+        columnDefs: [
+            { orderable: false, targets: nonOrderableColumns },
+            { type: 'dom-checkbox', targets: [1] } 
+        ],
           stateSave: true,
 
           // Search
@@ -298,6 +308,12 @@
               smart: true
           }
       });
+
+      var table = document.getElementById('entryTable_filter');
+      var search = table.querySelector('label input[type="search"]');
+      search.value = "";
+      var event = new Event('keyup');
+      search.dispatchEvent(event);
   });
 </script>
 
@@ -333,6 +349,24 @@
       aspectRatio: 1.5
     }
   });
+
+  // Add click event listener to the pie chart
+  myChart.canvas.addEventListener('click', function(event) {
+    var activeElements = myChart.getElementsAtEventForMode(event, 'nearest', { intersect: true });
+
+    if (activeElements.length > 0) {
+      var clickedLabel = myChart.data.labels[activeElements[0].index];
+      pieFilterTable(clickedLabel);
+    }
+  });
+
+  function pieFilterTable(label) {
+    var table = document.getElementById('entryTable_filter');
+    var search = table.querySelector('label input[type="search"]');
+    search.value = label;
+    var event = new Event('keyup');
+    search.dispatchEvent(event);
+  }
 </script>
 {% endif %}
 {% else %}
