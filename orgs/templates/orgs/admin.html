@@ -54,6 +54,31 @@
         </div>
     </div>
 </form>
+<form id="editCompanyForm">
+    {% csrf_token %}
+    <div class="modal fade" id="editCompanyModal" tabindex="-1" role="dialog" aria-labelledby="editCompanyModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCompanyModalLabel">Edit Current Company</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editCompanyInput">Company Name:</label>
+                        <input type="text" class="form-control" id="editCompanyInput" placeholder="Enter new name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditCompanyBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
 <form id="deleteCompanyForm">
     {% csrf_token %}
     <div class="modal fade" id="deleteCompanyModal" tabindex="-1" role="dialog" aria-labelledby="deleteCompanyModalLabel" aria-hidden="true">
@@ -648,6 +673,55 @@
         }
         var deleteCompanyForm = document.getElementById("deleteCompanyForm");
         deleteCompanyForm.addEventListener("submit", delete_company_submit);
+    }
+
+    function handle_edit_company(company_id) {
+        $.ajax({
+            url: 'edit-company/' + company_id + '/',
+            type: 'GET',
+            data: {                  
+            },
+            dataType: 'json',
+            success: function(response) {
+              //console.log(response);
+              $('#editCompanyInput').val(response.old_company_name);
+              $('#editCompanyModal').modal('show');
+            },
+            error: function(response) {
+              alert("Error Trying to Modify Company!");
+            }
+          });
+        function edit_fault_submit(event) {
+            event.preventDefault();
+            company = $('#editCompanyInput').val();
+            formData = new FormData();
+            formData.append('company', company);
+            $.ajax({
+                url: 'edit-company/' + company_id + '/',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false, // Prevent jQuery from processing the data
+                contentType: false, // Let the browser set the content type automatically
+                beforeSend: function(xhr, settings) {
+                    // Retrieve the CSRF token from the cookie
+                    var csrfToken = getCookie('csrftoken');
+                    // Set the CSRF token in the request header
+                    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                },
+                success: function(response) {
+                  //console.log(response);
+                  $('#editCompanyModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(response) {
+                  alert("Error Trying to Modify Company!");
+                  window.location.reload();
+                }
+              });
+        }
+        var editCompanyForm = document.getElementById("editCompanyForm");
+        editCompanyForm.addEventListener("submit", edit_company_submit);
     }
 
     function handle_edit_fault(fault_id) {
