@@ -28,6 +28,7 @@ urlpatterns = [
     path('delete-here/<int:node_id>/', views.remove_node, name='delete-node'),
     path('admin-page/', views.admin_page, name='admin-page'),
     path('admin-page/create-company/', views.admin_create_company, name='admin-create-company'),
+    path('admin-page/edit-company/<int:company_id>/', views.admin_edit_company, name='admin-edit-company'),
     path('admin-page/delete-company/<int:company_id>/', views.admin_delete_company, name='admin-delete-company'),
     path('admin-page/create-fault/', views.admin_create_fault, name='admin-create-fault'),
     path('admin-page/edit-fault/<int:fault_id>/', views.admin_edit_fault, name='admin-edit-fault'),

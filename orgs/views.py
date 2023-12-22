@@ -394,6 +394,8 @@ def company_view(request, node_id):
                'recent_reports':recent_reports, 'write_perms':write_perms}
     return render(request, 'orgs/company.html', context)
 
+@login_required
+@group_required
 def function_view(request, node_id):
     """
     This is the function called when a functionality page is loaded. It
@@ -405,6 +407,9 @@ def function_view(request, node_id):
     units = Unit.objects.filter(function=function)
     unit = units[0]
 
+    all_reports = Report.objects.filter(unit__in=units)
+    open_reports = Report.objects.filter(unit__in=units, condition__closed=False)
+    
     recent_reports = []
     recent_reports_ids = ""
     for unit in units:
@@ -418,9 +423,14 @@ def function_view(request, node_id):
             else:
                 recent_reports_ids += "%d" % recent_temp.id
 
-    context = {'function': function, 'units':units, 'unit':unit, 'recent_reports_ids':recent_reports_ids}
+    write_perms = request.user.groups.filter(name='Write').exists()
+
+    context = {'function': function, 'units':units, 'unit':unit, 'recent_reports_ids':recent_reports_ids,
+            'open_reports': open_reports, 'all_reports':all_reports, 'write_perms':write_perms}
     return render(request, 'orgs/function.html', context)
 
+@login_required
+@group_required
 def asset_view(request, asset_id):   
     """
     This is the function called when a asset page is loaded. It
@@ -432,6 +442,9 @@ def asset_view(request, asset_id):
     units = Unit.objects.filter(asset=asset)
     unit = units[0]
 
+    all_reports = Report.objects.filter(unit__in=units)
+    open_reports = Report.objects.filter(unit__in=units, condition__closed=False)
+
     recent_reports = []
     recent_reports_ids = ""
     for unit in units:
@@ -445,7 +458,10 @@ def asset_view(request, asset_id):
             else:
                 recent_reports_ids += "%d" % recent_temp.id
 
-    context = {'asset': asset, 'units':units, 'unit':unit,'recent_reports_ids':recent_reports_ids}
+    write_perms = request.user.groups.filter(name='Write').exists()
+
+    context = {'asset': asset, 'units':units, 'unit':unit,'recent_reports_ids':recent_reports_ids,
+               'open_reports': open_reports, 'all_reports':all_reports, 'write_perms':write_perms}
     return render(request, 'orgs/asset.html', context)
 
 def unit(request, node_id):
@@ -1076,6 +1092,18 @@ def admin_create_company(request):
         UnitName(name=company).save()
         return JsonResponse({"data": ""}, status=200)
     return JsonResponse({"data": ""}, status=400)
+
+def admin_edit_company(request, company_id):
+    if request.method == 'POST':
+        company = request.POST['company']
+
+        old_company = UnitName.objects.get(id=company_id)
+        old_company.name = company
+        old_company.save()
+        return JsonResponse({"data": ""}, status=200)
+    else: #GET request
+        old_company = UnitName.objects.get(id=company_id)
+        return JsonResponse({"old_company_name": old_company.name}, status=200)
 
 def admin_delete_company(request, company_id):
     if request.method == 'POST':
